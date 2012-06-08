@@ -23,12 +23,12 @@ uses
   GUITestRunner,
   TextTestRunner,
   TestSvBindings in 'TestSvBindings.pas',
-  SvBindings.Converters in '..\Bindings\SvBindings.Converters.pas',
-  SvBindings in '..\Bindings\SvBindings.pas',
-  SvBindings.Validation in '..\Bindings\SvBindings.Validation.pas',
-  SvBindings.VCLControls in '..\Bindings\SvBindings.VCLControls.pas',
-  SvDesignPatterns in '..\Core\SvDesignPatterns.pas',
-  SvRttiUtils in '..\Core\SvRttiUtils.pas',
+  SvBindings.Converters in '..\SvBindings.Converters.pas',
+  SvBindings in '..\SvBindings.pas',
+  SvBindings.Validation in '..\SvBindings.Validation.pas',
+  SvBindings.VCLControls in '..\SvBindings.VCLControls.pas',
+  SvDesignPatterns in '..\..\Core\SvDesignPatterns.pas',
+  SvRttiUtils in '..\..\Core\SvRttiUtils.pas',
   ViewTestBindings in 'ViewTestBindings.pas' {frmTest},
   DataObject in 'DataObject.pas';
 
