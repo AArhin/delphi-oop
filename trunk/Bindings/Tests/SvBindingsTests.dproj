@@ -48,12 +48,12 @@
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
 			<DCCReference Include="TestSvBindings.pas"/>
-			<DCCReference Include="..\Bindings\SvBindings.Converters.pas"/>
-			<DCCReference Include="..\Bindings\SvBindings.pas"/>
-			<DCCReference Include="..\Bindings\SvBindings.Validation.pas"/>
-			<DCCReference Include="..\Bindings\SvBindings.VCLControls.pas"/>
-			<DCCReference Include="..\Core\SvDesignPatterns.pas"/>
-			<DCCReference Include="..\Core\SvRttiUtils.pas"/>
+			<DCCReference Include="..\SvBindings.Converters.pas"/>
+			<DCCReference Include="..\SvBindings.pas"/>
+			<DCCReference Include="..\SvBindings.Validation.pas"/>
+			<DCCReference Include="..\SvBindings.VCLControls.pas"/>
+			<DCCReference Include="..\..\Core\SvDesignPatterns.pas"/>
+			<DCCReference Include="..\..\Core\SvRttiUtils.pas"/>
 			<DCCReference Include="ViewTestBindings.pas">
 				<Form>frmTest</Form>
 			</DCCReference>
@@ -71,7 +71,7 @@
 			</BuildConfiguration>
 		</ItemGroup>
 		<Import Condition="Exists('$(BDS)\Bin\CodeGear.Delphi.Targets')" Project="$(BDS)\Bin\CodeGear.Delphi.Targets"/>
-		<Import Condition="Exists('$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\8.0\UserTools.proj')" Project="$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\8.0\UserTools.proj"/>
+		<Import Condition="Exists('$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj')" Project="$(APPDATA)\Embarcadero\$(BDSAPPDATABASEDIR)\$(PRODUCTVERSION)\UserTools.proj"/>
 		<ProjectExtensions>
 			<Borland.Personality>Delphi.Personality.12</Borland.Personality>
 			<Borland.ProjectType/>

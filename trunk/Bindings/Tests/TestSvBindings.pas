@@ -12,7 +12,7 @@ unit TestSvBindings;
 interface
 
 uses
-  TestFramework, SvDesignPatterns, Classes, SvBindings, DSharp.Bindings, Rtti, SysUtils, DataObject,
+  TestFramework, Classes, SvBindings, DSharp.Bindings, Rtti, SysUtils, DataObject,
   ViewTestBindings, Forms;
 
 type
