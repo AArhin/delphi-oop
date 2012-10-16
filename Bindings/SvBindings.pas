@@ -70,14 +70,19 @@ type
   /// Do not forget to add DSharp.Bindings.VCLControls to the interface uses clause of the View unit as the last item
   /// </remarks>
   TDataBindManager = class abstract
+  strict private
+    class var FBinder: TBindingGroup;
   private
+    class constructor Create;
+    class destructor Destroy;
+
     class function GetBinderAttribute(AMember: TRttiMember): BindAttribute;
     class procedure AddSourceNotification(const APropName: string; ABinding: TBinding; ASource: TObject);
   protected
     class procedure SourceObjUpdated(ASender: TObject;
         APropertyName: string; AUpdateTrigger: TUpdateTrigger = utPropertyChanged);
   public
-    class procedure BindView(ABindableView, ASource: TObject; ABinder: TBindingGroup);
+    class procedure BindView(ABindableView, ASource: TObject; ABinder: TBindingGroup = nil);
   end;
 
 
@@ -171,10 +176,14 @@ var
   LAttr: BindAttribute;
   LVal: TValue;
   LBinding: TBinding;
+  LBinder: TBindingGroup;
 begin
   Assert(Assigned(ABindableView), 'ABindableView must be assigned');
   Assert(Assigned(ASource), 'ASource must be assigned');
-  Assert(Assigned(ABinder), 'ABinder must be assigned');
+  //Assert(Assigned(ABinder), 'ABinder must be assigned');
+  LBinder := ABinder;
+  if not Assigned(LBinder) then
+    LBinder := FBinder;
 
   rTypeView := TRttiContext.Create.GetType(ABindableView.ClassInfo);
 
@@ -186,7 +195,7 @@ begin
     begin
       LVal := rField.GetValue(ABindableView);
       Assert(LVal.IsObject, 'Bindable property must be TObject');
-      LBinding := ABinder.AddBinding(ASource, LAttr.GetSourcePropertyNameDef(rField.Name), LVal.AsObject,
+      LBinding := LBinder.AddBinding(ASource, LAttr.GetSourcePropertyNameDef(rField.Name), LVal.AsObject,
         LAttr.GetTargetPropertyNameDef('Text'), LAttr.BindingMode, LAttr.Converter);
       //if source object's property is not managed, then assign event on which it will be freed
       AddSourceNotification(LAttr.GetSourcePropertyNameDef(rField.Name), LBinding, ASource);
@@ -200,12 +209,22 @@ begin
     begin
       LVal := rProp.GetValue(ABindableView);
       Assert(LVal.IsObject, 'Bindable property must be TObject');
-      LBinding := ABinder.AddBinding(ASource, LAttr.GetSourcePropertyNameDef(rProp.Name), LVal.AsObject,
+      LBinding := LBinder.AddBinding(ASource, LAttr.GetSourcePropertyNameDef(rProp.Name), LVal.AsObject,
         LAttr.GetTargetPropertyNameDef('Text'), LAttr.BindingMode, LAttr.Converter);
       //if source object's property is not managed, then assign event on which it will be freed
       AddSourceNotification(LAttr.GetSourcePropertyNameDef(rProp.Name), LBinding, ASource);
     end;
   end;
+end;
+
+class constructor TDataBindManager.Create;
+begin
+  FBinder := TBindingGroup.Create(nil);
+end;
+
+class destructor TDataBindManager.Destroy;
+begin
+  FBinder.Free;
 end;
 
 class function TDataBindManager.GetBinderAttribute(AMember: TRttiMember): BindAttribute;
