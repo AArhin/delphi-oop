@@ -103,4 +103,12 @@ object frmTest: TfrmTest
     TabOrder = 9
     Text = 'edScript'
   end
+  object edDate: TEdit
+    Left = 24
+    Top = 216
+    Width = 121
+    Height = 21
+    TabOrder = 10
+    Text = 'edDate'
+  end
 end
