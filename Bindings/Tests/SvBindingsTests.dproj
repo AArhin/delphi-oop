@@ -24,7 +24,7 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
-			<DCC_UnitSearchPath>$(BDS)\Source\DUnit\src;D:\Delphi Projects\SVN Projects\delphisorcery\Source\Bindings;D:\Delphi Projects\SVN Projects\delphisorcery\Source\Core;D:\Delphi Projects\SVN Projects\delphisorcery\Source\Collections;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_UnitSearchPath>$(BDS)\Source\DUnit\src;D:\Delphi Projects\SVN Projects\delphisorcery\Source\Bindings;D:\Delphi Projects\SVN Projects\delphisorcery\Source\Core;D:\Delphi Projects\SVN Projects\delphisorcery\Source\Collections;D:\Delphi Projects\SVN Projects\delphisorcery\Source\DelphiWebScript;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_Define>_CONSOLE_TESTRUNNER;$(DCC_Define)</DCC_Define>
 			<DCC_UsePackage>vcl;vclx;VclSmp;rtl;vclimg;svnui;svn;bdertl;TeeUI;TeeDB;Tee;vclactnband;vcldb;dbrtl;vcldbx;vcltouch;xmlrtl;dsnap;dsnapcon;vclib;ibxpress;adortl;IndyCore;IndySystem;IndyProtocols;inet;intrawebdb_110_150;Intraweb_110_150;vclie;websnap;webdsnap;inetdb;inetdbbde;inetdbxpress;soaprtl;vclribbon;dbexpress;DbxCommonDriver;DataSnapIndy10ServerTransport;DataSnapProviderClient;DbxClientDriver;DataSnapClient;dbxcds;DataSnapServer;AzureCloud;DBXInterBaseDriver;DBXMySQLDriver;DBXFirebirdDriver;DBXSybaseASEDriver;DBXSybaseASADriver;DBXOracleDriver;DBXMSSQLDriver;DBXInformixDriver;DBXDb2Driver;CodeSiteExpressVcl</DCC_UsePackage>
 			<DCC_ImageBase>00400000</DCC_ImageBase>
@@ -58,6 +58,7 @@
 				<Form>frmTest</Form>
 			</DCCReference>
 			<DCCReference Include="DataObject.pas"/>
+			<DCCReference Include="..\SvBindings.Converters.DWScript.pas"/>
 			<BuildConfiguration Include="Release">
 				<Key>Cfg_2</Key>
 				<CfgParent>Base</CfgParent>

@@ -30,7 +30,8 @@ uses
   SvDesignPatterns in '..\..\Core\SvDesignPatterns.pas',
   SvRttiUtils in '..\..\Core\SvRttiUtils.pas',
   ViewTestBindings in 'ViewTestBindings.pas' {frmTest},
-  DataObject in 'DataObject.pas';
+  DataObject in 'DataObject.pas',
+  SvBindings.Converters.DWScript in '..\SvBindings.Converters.DWScript.pas';
 
 {$R *.RES}
 

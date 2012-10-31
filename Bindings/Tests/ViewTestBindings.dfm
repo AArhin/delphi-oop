@@ -95,4 +95,12 @@ object frmTest: TfrmTest
     ShowSelRange = False
     TabOrder = 8
   end
+  object edScript: TEdit
+    Left = 24
+    Top = 184
+    Width = 121
+    Height = 21
+    TabOrder = 9
+    Text = 'edScript'
+  end
 end
