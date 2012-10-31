@@ -66,6 +66,9 @@ begin
   FData.Caption := 'be';
   CheckEqualsString('BE', FForm.edScript.Text);
 
+  FData.CurrentDate := Now;
+  CheckEqualsString(FormatDateTime('yyyy-mmmm-dd', FData.CurrentDate), FForm.edDate.Text);
+
   CheckTrue(FForm.CheckBox1.Checked);
   CheckEquals(FData.ID, FForm.SpinEdit1.Value);
   CheckTrue(SameDate(FData.Date, FForm.DateTimePicker1.Date));

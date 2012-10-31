@@ -49,6 +49,7 @@ type
     FItems: TStrings;
     FIsEnabled: Boolean;
     FCaption: string;
+    FCurrentDate: TDateTime;
     procedure SetName(const Value: string);
     procedure SetID(const Value: Integer);
     procedure SetDate(const Value: TDateTime);
@@ -58,6 +59,7 @@ type
     procedure SetIsEnabled(const Value: Boolean);
     procedure SetItems(const Value: TStrings);
     procedure SetCaption(const Value: string);
+    procedure SetCurrentDate(const Value: TDateTime);
   public
     constructor Create;
     destructor Destroy; override;
@@ -67,6 +69,7 @@ type
 
     property Name: string read FName write SetName;
     property Caption: string read FCaption write SetCaption;
+    property CurrentDate: TDateTime read FCurrentDate write SetCurrentDate;
     property ID: Integer read FID write SetID;
     property Date: TDateTime read FDate write SetDate;
     property Points: Integer read FPoints write SetPoints;
@@ -113,6 +116,12 @@ procedure TData.SetColor(const Value: TColor);
 begin
   FColor := Value;
   DoPropertyChanged('Color');
+end;
+
+procedure TData.SetCurrentDate(const Value: TDateTime);
+begin
+  FCurrentDate := Value;
+  DoPropertyChanged('CurrentDate');
 end;
 
 procedure TData.SetDate(const Value: TDateTime);

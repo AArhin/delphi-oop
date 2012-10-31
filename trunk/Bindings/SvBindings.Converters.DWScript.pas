@@ -74,14 +74,24 @@ end;
 
 function TDWScriptConverter.Convert(const Value: TValue): TValue;
 begin
-  SourceToTargetExpression := ScriptExpression(FAttribute.SourceExpression, FSource);
-  Result := inherited Convert(Value);
+  if (FAttribute.SourceExpression = '') then
+    Result := Value
+  else
+  begin
+    SourceToTargetExpression := ScriptExpression(FAttribute.SourceExpression, FSource);
+    Result := inherited Convert(Value);
+  end;
 end;
 
 function TDWScriptConverter.ConvertBack(const Value: TValue): TValue;
 begin
-  TargetToSourceExpression := ScriptExpression(FAttribute.TargetExpression, FTarget);
-  Result := inherited ConvertBack(Value);
+  if (FAttribute.TargetExpression = '') then
+    Result := Value
+  else
+  begin
+    TargetToSourceExpression := ScriptExpression(FAttribute.TargetExpression, FTarget);
+    Result := inherited ConvertBack(Value);
+  end;
 end;
 
 initialization
