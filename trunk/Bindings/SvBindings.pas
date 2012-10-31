@@ -32,30 +32,44 @@ unit SvBindings;
 interface
 
 uses
-  SysUtils, DSharp.Bindings, DSharp.Core.DataConversion, SvDesignPatterns, SvBindings.Converters,
+  SysUtils, DSharp.Bindings, DSharp.Core.DataConversion, SvBindings.Converters,
   Generics.Collections, Rtti, DSharp.Bindings.Notifications, Classes;
 
 type
   TBindConverterType = (bctNone = 0, bctEnumFromString, bctListFromString, bctVariantFromString,
-    bctDateTimeFirstDayOfTheMonthFromDateTime);
+    bctDateTimeFirstDayOfTheMonthFromDateTime, bctDWScriptExpression);
 
   BindAttribute = class(TCustomAttribute)
   private
     FSourcePropertyName: string;
     FTargetPropertyName: string;
     FBindingMode: TBindingMode;
-    FConverter: IValueConverter;
-
+    FConverterType: TBindConverterType;
   public
     constructor Create(const ASourcePropertyName: string = ''; const ATargetPropertyName: string = '';
       ABindingMode: TBindingMode = BindingModeDefault; AConverterType: Integer = 0); overload;
 
     function GetSourcePropertyNameDef(const ADef: string = ''): string;
     function GetTargetPropertyNameDef(const ADef: string = ''): string;
+    function GetConverter(ASource, ATarget: TObject): IValueConverter; virtual;
 
     property SourcePropertyName: string read FSourcePropertyName;
     property BindingMode: TBindingMode read FBindingMode;
-    property Converter: IValueConverter read FConverter;
+  end;
+  /// <remarks>
+  /// Can write DWScript expressions. DWScript must be present in the sources
+  /// </remarks>
+  BindExpressionAttribute = class(BindAttribute)
+  private
+    FSourceExpression: string;
+    FTargetExpression: string;
+  public
+    constructor Create(const ASourcePropertyName: string; const ATargetPropertyName: string;
+      const ASourceToTargetExpression: string; const ATargetToSourceExpression: string;
+      ABindingMode: TBindingMode = BindingModeDefault); overload;
+
+    property SourceExpression: string read FSourceExpression write FSourceExpression;
+    property TargetExpression: string read FTargetExpression write FTargetExpression;
   end;
 
 
@@ -65,6 +79,8 @@ type
     property Binder: TBindingGroup read GetBinder;
   end;
 
+  TGetInstanceFunc = reference to function(AAtribute: BindAttribute; ASource, ATarget: TObject): IValueConverter;
+
   /// <remarks>
   /// Data binder manager
   /// Do not forget to add DSharp.Bindings.VCLControls to the interface uses clause of the View unit as the last item
@@ -72,6 +88,7 @@ type
   TDataBindManager = class abstract
   strict private
     class var FBinder: TBindingGroup;
+    class var FConverters: TDictionary<TBindConverterType,TGetInstanceFunc>;
   private
     class constructor Create;
     class destructor Destroy;
@@ -82,26 +99,40 @@ type
     class procedure SourceObjUpdated(ASender: TObject;
         APropertyName: string; AUpdateTrigger: TUpdateTrigger = utPropertyChanged);
   public
+    class procedure RegisterConverter(AKey: TBindConverterType; AGetInstanceFunc: TGetInstanceFunc);
+    class function GetConverter(AKey: TBindConverterType; AAtribute: BindAttribute; ASource, ATarget: TObject): IValueConverter;
+
     class procedure BindView(ABindableView, ASource: TObject; ABinder: TBindingGroup = nil);
   end;
 
-
-var
-  BindConverters: TMultiton<Integer,IValueConverter> = nil;
- // BindManager: TDataBindManager = nil;
 
 implementation
 
 procedure RegisterDefaultConverters();
 begin
-  BindConverters.RegisterFactoryMethod(Ord(bctEnumFromString),
-    function: IValueConverter begin Result := TEnumConverter.Create; end);
-  BindConverters.RegisterFactoryMethod(Ord(bctListFromString),
-    function: IValueConverter begin Result := TListConverter.Create; end);
-  BindConverters.RegisterFactoryMethod(Ord(bctVariantFromString),
-    function: IValueConverter begin Result := TVariantConverter.Create; end);
-  BindConverters.RegisterFactoryMethod(Ord(bctDateTimeFirstDayOfTheMonthFromDateTime),
-    function: IValueConverter begin Result := TDateTimeFirstDayConverter.Create; end);
+  TDataBindManager.RegisterConverter(bctEnumFromString,
+    function(AAtribute: BindAttribute; ASource, ATarget: TObject): IValueConverter
+    begin
+      Result := TEnumConverter.Create;
+    end );
+
+  TDataBindManager.RegisterConverter(bctListFromString,
+    function(AAtribute: BindAttribute; ASource, ATarget: TObject): IValueConverter
+    begin
+      Result := TListConverter.Create;
+    end );
+
+  TDataBindManager.RegisterConverter(bctVariantFromString,
+    function(AAtribute: BindAttribute; ASource, ATarget: TObject): IValueConverter
+    begin
+      Result := TVariantConverter.Create;
+    end );
+
+  TDataBindManager.RegisterConverter(bctDateTimeFirstDayOfTheMonthFromDateTime,
+    function(AAtribute: BindAttribute; ASource, ATarget: TObject): IValueConverter
+    begin
+      Result := TDateTimeFirstDayConverter.Create;
+    end );
 end;
 
 { BindAttribute }
@@ -113,13 +144,16 @@ begin
   FSourcePropertyName := ASourcePropertyName;
   FTargetPropertyName := ATargetPropertyName;
   FBindingMode := ABindingMode;
-
-  if AConverterType <> 0 then
-  begin
-    FConverter := BindConverters.GetInstance(AConverterType);
-  end;
+  FConverterType := TBindConverterType(AConverterType);
 end;
 
+
+function BindAttribute.GetConverter(ASource, ATarget: TObject): IValueConverter;
+begin
+  Result := nil;
+  if FConverterType <> bctNone then
+    Result := TDataBindManager.GetConverter(FConverterType, Self, ASource, ATarget);
+end;
 
 function BindAttribute.GetSourcePropertyNameDef(const ADef: string): string;
 begin
@@ -196,7 +230,7 @@ begin
       LVal := rField.GetValue(ABindableView);
       Assert(LVal.IsObject, 'Bindable property must be TObject');
       LBinding := LBinder.AddBinding(ASource, LAttr.GetSourcePropertyNameDef(rField.Name), LVal.AsObject,
-        LAttr.GetTargetPropertyNameDef('Text'), LAttr.BindingMode, LAttr.Converter);
+        LAttr.GetTargetPropertyNameDef('Text'), LAttr.BindingMode, LAttr.GetConverter(ASource, LVal.AsObject));
       //if source object's property is not managed, then assign event on which it will be freed
       AddSourceNotification(LAttr.GetSourcePropertyNameDef(rField.Name), LBinding, ASource);
     end;
@@ -210,7 +244,7 @@ begin
       LVal := rProp.GetValue(ABindableView);
       Assert(LVal.IsObject, 'Bindable property must be TObject');
       LBinding := LBinder.AddBinding(ASource, LAttr.GetSourcePropertyNameDef(rProp.Name), LVal.AsObject,
-        LAttr.GetTargetPropertyNameDef('Text'), LAttr.BindingMode, LAttr.Converter);
+        LAttr.GetTargetPropertyNameDef('Text'), LAttr.BindingMode, LAttr.GetConverter(ASource, LVal.AsObject));
       //if source object's property is not managed, then assign event on which it will be freed
       AddSourceNotification(LAttr.GetSourcePropertyNameDef(rProp.Name), LBinding, ASource);
     end;
@@ -220,11 +254,13 @@ end;
 class constructor TDataBindManager.Create;
 begin
   FBinder := TBindingGroup.Create(nil);
+  FConverters := TDictionary<TBindConverterType,TGetInstanceFunc>.Create();
 end;
 
 class destructor TDataBindManager.Destroy;
 begin
   FBinder.Free;
+  FConverters.Free;
 end;
 
 class function TDataBindManager.GetBinderAttribute(AMember: TRttiMember): BindAttribute;
@@ -239,6 +275,25 @@ begin
     end;
   end;
   Result := nil;
+end;
+
+class function TDataBindManager.GetConverter(AKey: TBindConverterType;
+  AAtribute: BindAttribute; ASource, ATarget: TObject): IValueConverter;
+var
+  LResult: TGetInstanceFunc;
+begin
+  if FConverters.TryGetValue(AKey, LResult) then
+  begin
+    Result := LResult(AAtribute, ASource, ATarget);
+  end
+  else
+    raise Exception.Create('Converter not registered');
+end;
+
+class procedure TDataBindManager.RegisterConverter(AKey: TBindConverterType;
+  AGetInstanceFunc: TGetInstanceFunc);
+begin
+  FConverters.AddOrSetValue(AKey, AGetInstanceFunc);
 end;
 
 class procedure TDataBindManager.SourceObjUpdated(ASender: TObject; APropertyName: string;
@@ -287,9 +342,18 @@ begin
   end;
 end;
 
+{ BindExpressionAttribute }
+
+constructor BindExpressionAttribute.Create(const ASourcePropertyName, ATargetPropertyName,
+  ASourceToTargetExpression, ATargetToSourceExpression: string; ABindingMode: TBindingMode);
+begin
+  inherited Create(ASourcePropertyName, ATargetPropertyName, ABindingMode, Ord(bctDWScriptExpression));
+  FSourceExpression := ASourceToTargetExpression;
+  FTargetExpression := ATargetToSourceExpression;
+end;
+
 initialization
-  BindConverters := TMultiton<Integer,IValueConverter>.Create(False);
   RegisterDefaultConverters();
-finalization
-  BindConverters.Free;
+
+
 end.

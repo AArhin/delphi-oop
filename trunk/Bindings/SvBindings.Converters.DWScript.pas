@@ -1,6 +1,7 @@
-(*
-* Copyright (c) 2012, Linas Naginionis
-* Contacts: lnaginionis@gmail.com or support@soundvibe.net
+(* SvBindings.Converters.DWScript.pas
+* Created: 2012-10-31
+* Copyright (c) 2011, Linas Naginionis
+* Contacts: lnaginionis@gmail.com or support@soundvibe.net or linas@vikarina.lt
 * All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
@@ -25,74 +26,65 @@
 * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *)
-unit ViewTestBindings;
+unit SvBindings.Converters.DWScript;
 
 interface
 
 uses
-  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, SvBindings, DSharp.Bindings, Spin, StdCtrls, ComCtrls, ExtCtrls,
-  DSharp.Bindings.VCLControls, DSharp.Bindings.VCLControls.SpinEdit;
+  DSharp.Core.DataConversion.Expressions
+  ,DSharp.DelphiWebScript.Expression
+  ,SvBindings
+  ,Rtti
+  ;
 
 type
-  TfrmTest = class(TForm, IBindableView)
-    [Bind('Name', 'Text')]
-    edt1: TEdit;
-    [Bind('Name', 'Caption')]
-    lbl1: TLabel;
-    Memo1: TMemo;
-    [Bind('IsEnabled', 'Enabled')]
-    Button1: TButton;
-    [Bind('IsChecked', 'Checked')]
-    CheckBox1: TCheckBox;
-   // [Bind('Items', 'Items')]
-    ListBox1: TListBox;
-    [Bind('ID', 'Value')]
-    SpinEdit1: TSpinEdit;
-    [Bind('Color', 'Selected')]
-    ColorBox1: TColorBox;
-    [Bind('Date', 'Date')]
-    DateTimePicker1: TDateTimePicker;
-    [Bind('Points', 'Position')]
-    TrackBar1: TTrackBar;
-    [BindExpression('Caption', 'Text', 'Uppercase(Caption)', 'UpperCase(Text)', bmTwoWay)]
-    edScript: TEdit;
+  TDWScriptConverter = class(TExpressionConverter)
   private
-    { Private declarations }
-    FBinder: TBindingGroup;
-    function GetBinder: TBindingGroup;
+    FAttribute: BindExpressionAttribute;
+    FSource: TObject;
+    FTarget: TObject;
   public
-    { Public declarations }
-    constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
-
-    property Binder: TBindingGroup read GetBinder;
+    function Convert(const Value: TValue): TValue; override;
+    function ConvertBack(const Value: TValue): TValue; override;
   end;
-
-var
-  frmTest: TfrmTest;
 
 implementation
 
-{$R *.dfm}
+uses
+  DSharp.Core.DataConversion
+  ;
 
-{ TfrmTest }
 
-constructor TfrmTest.Create(AOwner: TComponent);
+procedure RegisterDefaultConverters();
 begin
-  inherited Create(AOwner);
-  FBinder := TBindingGroup.Create(Self);
+  TDataBindManager.RegisterConverter(bctDWScriptExpression,
+    function(AAtribute: BindAttribute; ASource, ATarget: TObject): IValueConverter
+    var
+      LConverter: TDWScriptConverter;
+    begin
+      LConverter := TDWScriptConverter.Create;
+      LConverter.FAttribute := AAtribute as BindExpressionAttribute;
+      LConverter.FSource := ASource;
+      LConverter.FTarget := ATarget;
+      Result := LConverter;
+    end );
 end;
 
-destructor TfrmTest.Destroy;
+{ TDWScriptConverter }
+
+function TDWScriptConverter.Convert(const Value: TValue): TValue;
 begin
-  FBinder.Free;
-  inherited Destroy;
+  SourceToTargetExpression := ScriptExpression(FAttribute.SourceExpression, FSource);
+  Result := inherited Convert(Value);
 end;
 
-function TfrmTest.GetBinder: TBindingGroup;
+function TDWScriptConverter.ConvertBack(const Value: TValue): TValue;
 begin
-  Result := FBinder;
+  TargetToSourceExpression := ScriptExpression(FAttribute.TargetExpression, FTarget);
+  Result := inherited ConvertBack(Value);
 end;
+
+initialization
+  RegisterDefaultConverters();
 
 end.
