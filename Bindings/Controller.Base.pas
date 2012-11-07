@@ -32,6 +32,7 @@ interface
 
 uses
   Rtti
+  ,Generics.Collections
   ;
 
 type
@@ -40,21 +41,16 @@ type
     procedure Initialize();
   end;
 
-  IController<TModel, TView: class> = interface
+  IController<TModel: class> = interface
     ['{AD4951E2-9AE0-4D45-A11F-BD4C70F19349}']
     function GetModel: TModel;
-    function GetView: TView;
-    function GetAutoFreeView: Boolean;
     function GetAutoFreeModel: Boolean;
-    procedure SetAutoFreeView(const Value: Boolean);
     procedure SetAutoFreeModel(const Value: Boolean);
-
-    property AutoFreeView: Boolean read GetAutoFreeView write SetAutoFreeView;
     property AutoFreeModel: Boolean read GetAutoFreeModel write SetAutoFreeModel;
     property Model: TModel read GetModel;
-    property View: TView read GetView;
   end;
 
+  TCreateViewFunc<TModel: class> = reference to function(AViewClass: TClass): IController<TModel>;
 
   ///	<summary>
   ///	  Base controller class  
@@ -62,29 +58,20 @@ type
   ///	<typeparam name="TModel">
   ///	  Model class type
   ///	</typeparam>
-  ///	<typeparam name="TView">
-  ///	  View (form) class type
-  ///	</typeparam>
   ///	<remarks>
   ///	  Controller automatically injects it's fields (marked with Bind
   ///	  attributes) with the same fields from the View. Names of these fields
   ///	  must match.
   ///	</remarks>
-  TBaseController<TModel, TView: class> = class(TInterfacedObject, Initializable, IController<TModel, TView>)
+  TBaseController<TModel: class> = class(TInterfacedObject, Initializable, IController<TModel>)
   private
     FModel: TModel;
-    FView: TView;
+    FView: TObject;
     FAutoFreeModel: Boolean;
-    FAutoFreeView: Boolean;
     function GetModel: TModel;
-    function GetView: TView;
-    function GetAutoFreeView: Boolean;
     function GetAutoFreeModel: Boolean;
-    procedure SetAutoFreeView(const Value: Boolean);
     procedure SetAutoFreeModel(const Value: Boolean);
   protected
-    constructor Create(AModel: TModel; AView: TView); virtual;
-
     function GetViewComponent(const AComponentName: string): TValue; virtual;
     procedure InjectViewProperties(); virtual;
     /// <remarks>
@@ -92,31 +79,39 @@ type
     /// </remarks>
     procedure Initialize(); virtual; abstract;
   public
+    constructor Create(AModel: TModel; AView: TObject); virtual;
     destructor Destroy; override;
 
-    ///	<summary>
-    ///	  If True then View will be destroyed when controller is freed.
-    ///	</summary>
-    property AutoFreeView: Boolean read GetAutoFreeView write SetAutoFreeView;
-
-    ///	<summary>
-    ///	  If True then Model will be destroyed when controller is freed.
-    ///	</summary>
     property AutoFreeModel: Boolean read GetAutoFreeModel write SetAutoFreeModel;
 
     property Model: TModel read GetModel;
-    property View: TView read GetView;
+
+  end;
+
+  TControllerFactory<TModel: class> = class
+  private
+    class var FControllers: TDictionary<TClass,IController<TModel>>;
+  protected
+    class constructor Create;
+    class destructor Destroy;
+  public
+    class procedure RegisterFactoryMethod(AViewClass: TClass; const AMethod: TCreateViewFunc<TModel>);
+    class function GetInstance(AViewClass: TClass): IController<TModel>;
   end;
 
 implementation
 
 uses
   SvBindings
+  ,SysUtils
   ;
 
-{ TBaseController<TModel, TView> }
+type
+  TControllerFactoryException = Exception;
 
-constructor TBaseController<TModel, TView>.Create(AModel: TModel; AView: TView);
+{ TBaseController<TModel> }
+
+constructor TBaseController<TModel>.Create(AModel: TModel; AView: TObject);
 begin
   inherited Create();
   FModel := AModel;
@@ -126,36 +121,25 @@ begin
   Initialize();
 end;
 
-destructor TBaseController<TModel, TView>.Destroy;
+destructor TBaseController<TModel>.Destroy;
 begin
   if FAutoFreeModel then
     FModel.Free;
-  if FAutoFreeView then
-    FView.Free;
+
   inherited Destroy;
 end;
 
-function TBaseController<TModel, TView>.GetAutoFreeModel: Boolean;
+function TBaseController<TModel>.GetAutoFreeModel: Boolean;
 begin
   Result := FAutoFreeModel;
 end;
 
-function TBaseController<TModel, TView>.GetAutoFreeView: Boolean;
-begin
-  Result := FAutoFreeView;
-end;
-
-function TBaseController<TModel, TView>.GetModel: TModel;
+function TBaseController<TModel>.GetModel: TModel;
 begin
   Result := FModel;
 end;
 
-function TBaseController<TModel, TView>.GetView: TView;
-begin
-  Result := FView;
-end;
-
-function TBaseController<TModel, TView>.GetViewComponent(
+function TBaseController<TModel>.GetViewComponent(
   const AComponentName: string): TValue;
 var
   LType: TRttiType;
@@ -167,11 +151,11 @@ begin
   LField := LType.GetField(AComponentName);
   if Assigned(LField) then
   begin
-    Result := LField.GetValue(TObject(FView));
+    Result := LField.GetValue(FView);
   end;
 end;
 
-procedure TBaseController<TModel, TView>.InjectViewProperties;
+procedure TBaseController<TModel>.InjectViewProperties;
 var
   LType: TRttiType;
   LField: TRttiField;
@@ -191,14 +175,33 @@ begin
   end;
 end;
 
-procedure TBaseController<TModel, TView>.SetAutoFreeModel(const Value: Boolean);
+procedure TBaseController<TModel>.SetAutoFreeModel(const Value: Boolean);
 begin
   FAutoFreeModel := Value;
 end;
 
-procedure TBaseController<TModel, TView>.SetAutoFreeView(const Value: Boolean);
+{ TControllerFactory }
+
+class constructor TControllerFactory<TModel>.Create;
 begin
-  FAutoFreeView := Value;
+  FControllers := TDictionary<TClass,IController<TModel>>.Create();
+end;
+
+class destructor TControllerFactory<TModel>.Destroy;
+begin
+  FControllers.Free;
+end;
+
+class function TControllerFactory<TModel>.GetInstance(AViewClass: TClass): IController<TModel>;
+begin
+  if not FControllers.TryGetValue(AViewClass, Result) then
+    raise TControllerFactoryException.CreateFmt('Controller class "%S" not registered', [AViewClass.ClassName]);
+end;
+
+class procedure TControllerFactory<TModel>.RegisterFactoryMethod(
+  AViewClass: TClass; const AMethod: TCreateViewFunc<TModel>);
+begin
+  FControllers.AddOrSetValue(AViewClass, AMethod(AViewClass));
 end;
 
 end.

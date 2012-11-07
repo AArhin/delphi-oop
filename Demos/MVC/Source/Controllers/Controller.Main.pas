@@ -12,7 +12,7 @@ uses
   ;
 
 type
-  TMainController = class(TBaseController<TUser, TfrmMain>)
+  TMainController = class(TBaseController<TUser>)
   private
     {$HINTS OFF}
     [Bind('Name', 'Text')]
@@ -28,18 +28,25 @@ type
     procedure DoOnCanvasPaint(Sender: TObject);
   end;
 
-  function CreateMainController(AView: TObject): IController<TUser, TfrmMain>;
+  function CreateMainController: IController<TUser>;
 
 implementation
 
 uses
   Graphics
+  ,Forms
   ;
 
-function CreateMainController(AView: TObject): IController<TUser, TfrmMain>;
+function CreateMainController: IController<TUser>;
 begin
-  Result := TMainController.Create(TUser.Create, AView as TfrmMain);
-  Result.AutoFreeModel := True;
+  TControllerFactory<TUser>.RegisterFactoryMethod(TfrmMain
+  , function(AViewClass: TClass): IController<TUser>
+    begin
+      Application.CreateForm(TfrmMain, frmMain);
+      Result := TMainController.Create(TUser.Create, frmMain);
+      Result.AutoFreeModel := True;
+    end);
+  Result := TControllerFactory<TUser>.GetInstance(TfrmMain);
 end;
 
 { TMainController }
