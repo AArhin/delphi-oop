@@ -40,7 +40,7 @@ uses
 function CreateMainController: IController<TUser>;
 begin
   TControllerFactory<TUser>.RegisterFactoryMethod(TfrmMain
-  , function(AViewClass: TClass): IController<TUser>
+  , function: IController<TUser>
     begin
       Application.CreateForm(TfrmMain, frmMain);
       Result := TMainController.Create(TUser.Create, frmMain);
