@@ -50,7 +50,7 @@ type
     property Model: TModel read GetModel;
   end;
 
-  TCreateViewFunc<TModel: class> = reference to function(AViewClass: TClass): IController<TModel>;
+  TCreateViewFunc<TModel: class> = reference to function: IController<TModel>;
 
   ///	<summary>
   ///	  Base controller class  
@@ -201,7 +201,7 @@ end;
 class procedure TControllerFactory<TModel>.RegisterFactoryMethod(
   AViewClass: TClass; const AMethod: TCreateViewFunc<TModel>);
 begin
-  FControllers.AddOrSetValue(AViewClass, AMethod(AViewClass));
+  FControllers.AddOrSetValue(AViewClass, AMethod());
 end;
 
 end.
