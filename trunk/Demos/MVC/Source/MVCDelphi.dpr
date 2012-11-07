@@ -14,8 +14,7 @@ uses
 begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
-  Application.CreateForm(TfrmMain, frmMain);
-  CreateMainController(frmMain);
+  CreateMainController;
   ReportMemoryLeaksOnShutdown := True;
   Application.Run;
 end.
