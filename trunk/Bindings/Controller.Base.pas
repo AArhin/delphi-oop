@@ -56,6 +56,20 @@ type
   end;
 
 
+  ///	<summary>
+  ///	  Base controller class  
+  ///	</summary>
+  ///	<typeparam name="TModel">
+  ///	  Model class type
+  ///	</typeparam>
+  ///	<typeparam name="TView">
+  ///	  View (form) class type
+  ///	</typeparam>
+  ///	<remarks>
+  ///	  Controller automatically injects it's fields (marked with Bind
+  ///	  attributes) with the same fields from the View. Names of these fields
+  ///	  must match.
+  ///	</remarks>
   TBaseController<TModel, TView: class> = class(TInterfacedObject, Initializable, IController<TModel, TView>)
   private
     FModel: TModel;
@@ -71,14 +85,23 @@ type
   protected
     constructor Create(AModel: TModel; AView: TView); virtual;
 
-    function GetViewComponent(const AComponentName: string): TValue;
+    function GetViewComponent(const AComponentName: string): TValue; virtual;
     procedure InjectViewProperties(); virtual;
-
+    /// <remarks>
+    /// Descendants must override and write initialization code here
+    /// </remarks>
     procedure Initialize(); virtual; abstract;
   public
     destructor Destroy; override;
 
+    ///	<summary>
+    ///	  If True then View will be destroyed when controller is freed.
+    ///	</summary>
     property AutoFreeView: Boolean read GetAutoFreeView write SetAutoFreeView;
+
+    ///	<summary>
+    ///	  If True then Model will be destroyed when controller is freed.
+    ///	</summary>
     property AutoFreeModel: Boolean read GetAutoFreeModel write SetAutoFreeModel;
 
     property Model: TModel read GetModel;
