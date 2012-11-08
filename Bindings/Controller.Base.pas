@@ -33,6 +33,8 @@ interface
 uses
   Rtti
   ,Generics.Collections
+  ,DSharp.Bindings
+  ,DSharp.Core.DataConversion
   ;
 
 type
@@ -82,6 +84,15 @@ type
     constructor Create(AModel: TModel; AView: TObject); virtual;
     destructor Destroy; override;
 
+    function AddBinding(ASource: TObject = nil; ASourcePropertyName: string = '';
+      ATarget: TObject = nil; ATargetPropertyName: string = '';
+      ABindingMode: TBindingMode = BindingModeDefault;
+      AConverter: IValueConverter = nil): TBinding;
+    function GetBindingForTarget(ATarget: TObject): TBinding;
+
+    procedure UpdateTargets();
+    procedure UpdateSources();
+
     property AutoFreeModel: Boolean read GetAutoFreeModel write SetAutoFreeModel;
 
     property Model: TModel read GetModel;
@@ -90,7 +101,7 @@ type
 
   TControllerFactory<TModel: class> = class
   private
-    class var FControllers: TDictionary<TClass,IController<TModel>>;
+    class var FControllers: TDictionary<TClass,TCreateViewFunc<TModel>>;
   protected
     class constructor Create;
     class destructor Destroy;
@@ -110,6 +121,13 @@ type
   TControllerFactoryException = Exception;
 
 { TBaseController<TModel> }
+
+function TBaseController<TModel>.AddBinding(ASource: TObject; ASourcePropertyName: string;
+  ATarget: TObject; ATargetPropertyName: string; ABindingMode: TBindingMode;
+  AConverter: IValueConverter): TBinding;
+begin
+  Result := TDataBindManager.AddBinding(ASource, ASourcePropertyName, ATarget, ATargetPropertyName, ABindingMode, AConverter);
+end;
 
 constructor TBaseController<TModel>.Create(AModel: TModel; AView: TObject);
 begin
@@ -132,6 +150,11 @@ end;
 function TBaseController<TModel>.GetAutoFreeModel: Boolean;
 begin
   Result := FAutoFreeModel;
+end;
+
+function TBaseController<TModel>.GetBindingForTarget(ATarget: TObject): TBinding;
+begin
+  Result := TDataBindManager.GetBindingForTarget(ATarget);
 end;
 
 function TBaseController<TModel>.GetModel: TModel;
@@ -180,11 +203,21 @@ begin
   FAutoFreeModel := Value;
 end;
 
+procedure TBaseController<TModel>.UpdateSources;
+begin
+  TDataBindManager.UpdateSources();
+end;
+
+procedure TBaseController<TModel>.UpdateTargets;
+begin
+  TDataBindManager.UpdateTargets();
+end;
+
 { TControllerFactory }
 
 class constructor TControllerFactory<TModel>.Create;
 begin
-  FControllers := TDictionary<TClass,IController<TModel>>.Create();
+  FControllers := TDictionary<TClass,TCreateViewFunc<TModel>>.Create();
 end;
 
 class destructor TControllerFactory<TModel>.Destroy;
@@ -193,15 +226,19 @@ begin
 end;
 
 class function TControllerFactory<TModel>.GetInstance(AViewClass: TClass): IController<TModel>;
+var
+  LResult: TCreateViewFunc<TModel>;
 begin
-  if not FControllers.TryGetValue(AViewClass, Result) then
+  if not FControllers.TryGetValue(AViewClass, LResult) then
     raise TControllerFactoryException.CreateFmt('Controller class "%S" not registered', [AViewClass.ClassName]);
+
+  Result := LResult();
 end;
 
 class procedure TControllerFactory<TModel>.RegisterFactoryMethod(
   AViewClass: TClass; const AMethod: TCreateViewFunc<TModel>);
 begin
-  FControllers.AddOrSetValue(AViewClass, AMethod());
+  FControllers.AddOrSetValue(AViewClass, AMethod);
 end;
 
 end.

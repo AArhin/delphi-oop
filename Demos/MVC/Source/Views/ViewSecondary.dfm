@@ -1,9 +1,9 @@
-object frmMain: TfrmMain
+object frmSecondary: TfrmSecondary
   Left = 0
   Top = 0
-  Caption = 'Main View'
-  ClientHeight = 466
-  ClientWidth = 663
+  Caption = 'Secondary View'
+  ClientHeight = 341
+  ClientWidth = 527
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -11,23 +11,8 @@ object frmMain: TfrmMain
   Font.Name = 'Tahoma'
   Font.Style = []
   OldCreateOrder = False
-  OnClose = FormClose
   PixelsPerInch = 96
   TextHeight = 13
-  object lbl1: TLabel
-    Left = 8
-    Top = 8
-    Width = 68
-    Height = 13
-    Caption = 'Enter a name:'
-  end
-  object lbl2: TLabel
-    Left = 248
-    Top = 8
-    Width = 72
-    Height = 13
-    Caption = 'Enter an email:'
-  end
   object pbCanvas: TPaintBox
     Left = 32
     Top = 72
@@ -48,13 +33,5 @@ object frmMain: TfrmMain
     Width = 201
     Height = 21
     TabOrder = 1
-  end
-  object btnNewForm: TButton
-    Left = 504
-    Top = 30
-    Width = 105
-    Height = 25
-    Caption = 'Show New Form'
-    TabOrder = 2
   end
 end

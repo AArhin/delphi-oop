@@ -102,6 +102,14 @@ type
     class procedure RegisterConverter(AKey: TBindConverterType; AGetInstanceFunc: TGetInstanceFunc);
     class function GetConverter(AKey: TBindConverterType; AAtribute: BindAttribute; ASource, ATarget: TObject): IValueConverter;
 
+    class function AddBinding(ASource: TObject = nil; ASourcePropertyName: string = '';
+      ATarget: TObject = nil; ATargetPropertyName: string = '';
+      ABindingMode: TBindingMode = BindingModeDefault;
+      AConverter: IValueConverter = nil): TBinding;
+    class function GetBindingForTarget(ATarget: TObject): TBinding;
+    class procedure UpdateTargets();
+    class procedure UpdateSources();
+
     class procedure BindView(ABindableView, ASource: TObject; ABinder: TBindingGroup = nil);
   end;
 
@@ -170,6 +178,13 @@ begin
 end;
 
 { TDataBindManager }
+
+class function TDataBindManager.AddBinding(ASource: TObject; ASourcePropertyName: string;
+  ATarget: TObject; ATargetPropertyName: string; ABindingMode: TBindingMode;
+  AConverter: IValueConverter): TBinding;
+begin
+  Result := FBinder.AddBinding(ASource, ASourcePropertyName, ATarget, ATargetPropertyName, ABindingMode, AConverter);
+end;
 
 class procedure TDataBindManager.AddSourceNotification(const APropName: string; ABinding: TBinding;
   ASource: TObject);
@@ -277,6 +292,11 @@ begin
   Result := nil;
 end;
 
+class function TDataBindManager.GetBindingForTarget(ATarget: TObject): TBinding;
+begin
+  Result := FBinder.GetBindingForTarget(ATarget);
+end;
+
 class function TDataBindManager.GetConverter(AKey: TBindConverterType;
   AAtribute: BindAttribute; ASource, ATarget: TObject): IValueConverter;
 var
@@ -340,6 +360,16 @@ begin
     utLostFocus:;
     utExplicit:;
   end;
+end;
+
+class procedure TDataBindManager.UpdateSources;
+begin
+  FBinder.UpdateSources();
+end;
+
+class procedure TDataBindManager.UpdateTargets;
+begin
+  FBinder.UpdateTargets();
 end;
 
 { BindExpressionAttribute }

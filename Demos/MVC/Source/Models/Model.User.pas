@@ -11,6 +11,8 @@ type
     procedure SetName(const Value: string);
     procedure SetEMail(const Value: string);
   public
+    constructor Create(const AName, AEmail: string); virtual;
+
     property Name: string read FName write SetName;
     property Email: string read FEmail write SetEMail;
   end;
@@ -22,6 +24,13 @@ uses
   ;
 
 { TUser }
+
+constructor TUser.Create(const AName, AEmail: string);
+begin
+  inherited Create;
+  FName := AName;
+  FEmail := AEmail;
+end;
 
 procedure TUser.SetEMail(const Value: string);
 begin
