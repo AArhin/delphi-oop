@@ -4,7 +4,6 @@ interface
 
 uses
   Controller.Base
-  ,ViewMain
   ,Model.User
   ,SvBindings
   ,StdCtrls
@@ -21,31 +20,47 @@ type
     edtEmail: TEdit;
     [Bind]
     pbCanvas: TPaintBox;
+    [Bind]
+    btnNewForm: TButton;
     {$HINTS ON}
   protected
     procedure Initialize(); override;
 
     procedure DoOnCanvasPaint(Sender: TObject);
+    procedure DoOpenNewForm(Sender: TObject);
   end;
 
-  function CreateMainController: IController<TUser>;
+  function CreateMainController(AUser: TUser): IController<TUser>;
 
 implementation
 
 uses
   Graphics
   ,Forms
+  ,ViewMain
+  ,ViewSecondary
   ;
 
-function CreateMainController: IController<TUser>;
+function CreateMainController(AUser: TUser): IController<TUser>;
 begin
   TControllerFactory<TUser>.RegisterFactoryMethod(TfrmMain
   , function: IController<TUser>
     begin
       Application.CreateForm(TfrmMain, frmMain);
-      Result := TMainController.Create(TUser.Create, frmMain);
+      Result := TMainController.Create(AUser, frmMain);
       Result.AutoFreeModel := True;
     end);
+
+  TControllerFactory<TUser>.RegisterFactoryMethod(TfrmSecondary
+  , function: IController<TUser>
+    var
+      LForm: TfrmSecondary;
+    begin
+      LForm := TfrmSecondary.Create(Application);
+      Result := TMainController.Create(AUser, LForm);
+      LForm.ShowModal;
+    end);
+
   Result := TControllerFactory<TUser>.GetInstance(TfrmMain);
 end;
 
@@ -64,11 +79,17 @@ begin
   LPaintBox.Canvas.TextOut(5,5, LText);
 end;
 
+procedure TMainController.DoOpenNewForm(Sender: TObject);
+begin
+  TControllerFactory<TUser>.GetInstance(TfrmSecondary);
+end;
+
 procedure TMainController.Initialize;
 begin
-  Model.Name := 'MVC Demo';
-  Model.Email := 'mvc@gmail.com';
-  pbCanvas.OnPaint := DoOnCanvasPaint;
+  if Assigned(pbCanvas) then
+    pbCanvas.OnPaint := DoOnCanvasPaint;
+  if Assigned(btnNewForm) then
+    btnNewForm.OnClick := DoOpenNewForm;
 end;
 
 end.
