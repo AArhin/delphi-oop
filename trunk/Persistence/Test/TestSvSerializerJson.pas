@@ -1,4 +1,4 @@
-﻿unit TestSvSerializerJsonFactory;
+﻿unit TestSvSerializerJson;
 {
 
   Delphi DUnit Test Case
@@ -12,22 +12,46 @@
 interface
 
 uses
-  TestFramework, SysUtils, SvSerializer, SvSerializerJsonFactory,
+  TestFramework, SysUtils, SvSerializer, SvSerializerJson,
   Classes, Generics.Collections, Graphics, uSvStrings, DB, MidasLib, DBClient
   ,Rtti;
 
 type
+  TMyObjectList<T: class> = class(Generics.Collections.TObjectList<T>)
+  public
+    constructor Create; reintroduce; overload;
+  end;
+
   TDemoEnum = (deOne, deTwo, deThree);
 
   TNumbers = set of TDemoEnum;
 
+  TDummy = class
+  private
+    FDummy: string;
+  public
+    constructor Create(); overload;
+    constructor Create(const ADummyName: string); overload;
+
+    property Dummy: string read FDummy write FDummy;
+  end;
 
   TBeanSuperSuper = class
   private
     FName: string;
+    FPassword: string;
+    FItems: TList<Integer>;
+    FDummies: TMyObjectList<TDummy>;
   public
-    [SvSerialize]
+    destructor Destroy; override;
+   // [SvSerialize]
     property Name: string read FName write FName;
+    [SvTransient]
+    property Password: string read FPassword write FPassword;
+
+    property Items: TList<Integer> read FItems write FItems;
+
+    property Dummies: TMyObjectList<TDummy> read FDummies write FDummies;
   end;
 
   TBeanSuper = class
@@ -100,6 +124,7 @@ type
   ...
   });
   *)
+
   TJQGridData = class
   private
     FTotalPages: Integer;
@@ -126,6 +151,7 @@ type
     property InvData: TClientDataset read FInvData write FInvData;
   end;
 
+
   TSimpleInside = class
   private
     FStringList: TStringList;
@@ -139,7 +165,7 @@ type
   TSimple = class
   private
     FList: TArray<string>;
-    FAList: TObjectList<TSimpleInside>;
+    FAList: Generics.Collections.TObjectList<TSimpleInside>;
   public
     constructor Create;
     destructor Destroy; override;
@@ -234,7 +260,7 @@ type
   strict private
     FILE_SERIALIZE: string;
     FSerializer: TSvSerializer;
-    FSvJsonSerializerFactory: TSvJsonSerializerFactory;
+    FSvJsonSerializerFactory: TSvJsonSerializer;
   public
     procedure SetUp; override;
     procedure TearDown; override;
@@ -335,7 +361,7 @@ end;
 procedure TestTSvJsonSerializerFactory.SetUp;
 begin
   FSerializer := TSvSerializer.Create(sstJson);
-  FSvJsonSerializerFactory := TSvJsonSerializerFactory(FSerializer.Factory);
+  FSvJsonSerializerFactory := TSvJsonSerializer(FSerializer.Factory);
   FILE_SERIALIZE := 'TestSerialize.json';
 end;
 
@@ -563,6 +589,12 @@ begin
     LBean.BeanSuper.LastName := 'Marley';
     LBean.BeanSuper.Bean := TBeanSuperSuper.Create;
     LBean.BeanSuper.Bean.Name := 'Junior';
+    LBean.BeanSuper.Bean.Password := 'password';
+    LBean.BeanSuper.Bean.Items := TList<Integer>.Create();
+    LBean.BeanSuper.Bean.Items.AddRange([1,2,3]);
+    LBean.BeanSuper.Bean.Dummies := TMyObjectList<TDummy>.Create();
+    LBean.BeanSuper.Bean.Dummies.Add(TDummy.Create('Foo'));
+    LBean.BeanSuper.Bean.Dummies.Add(TDummy.Create('Bar'));
 
     FSerializer.AddObject('', LBean);
 
@@ -580,7 +612,14 @@ begin
     CheckEqualsString('Bob', LBean.FirstName);
     CheckEqualsString('Marley', LBean.BeanSuper.LastName);
     CheckEqualsString('Junior', LBean.BeanSuper.Bean.Name);
-
+    CheckEqualsString('',LBean.BeanSuper.Bean.Password);
+    CheckEquals(3, LBean.BeanSuper.Bean.Items.Count);
+    CheckEquals(1, LBean.BeanSuper.Bean.Items[0]);
+    CheckEquals(2, LBean.BeanSuper.Bean.Items[1]);
+    CheckEquals(3, LBean.BeanSuper.Bean.Items[2]);
+    CheckEquals(2, LBean.BeanSuper.Bean.Dummies.Count);
+    CheckEqualsString('Foo', LBean.BeanSuper.Bean.Dummies[0].Dummy);
+    CheckEqualsString('Bar', LBean.BeanSuper.Bean.Dummies[1].Dummy);
   finally
     LBean.Free;
   end;
@@ -1041,7 +1080,7 @@ end;
 
 constructor TSimple.Create;
 begin
-  FAList := TObjectList<TSimpleInside>.Create(True);
+  FAList := Generics.Collections.TObjectList<TSimpleInside>.Create(True);
 end;
 
 destructor TSimple.Destroy;
@@ -1076,6 +1115,35 @@ destructor TBeanSuper.Destroy;
 begin
   FBean.Free;
   inherited;
+end;
+
+{ TBeanSuperSuper }
+
+destructor TBeanSuperSuper.Destroy;
+begin
+  FItems.Free;
+  FDummies.Free;
+  inherited;
+end;
+
+{ TDummy }
+
+constructor TDummy.Create;
+begin
+  inherited Create;
+end;
+
+constructor TDummy.Create(const ADummyName: string);
+begin
+  inherited Create;
+  FDummy := ADummyName;
+end;
+
+{ TObjectList<T> }
+
+constructor TMyObjectList<T>.Create;
+begin
+  inherited Create(True);
 end;
 
 initialization

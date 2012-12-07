@@ -61,6 +61,11 @@ type
     property Name: string read FName;
   end;
 
+  /// <remarks>
+  /// Properties marked as [SvTransient] are ignored during serialization/deserialization
+  /// </remarks>
+  SvTransientAttribute = class(TCustomAttribute);
+
   ESvSerializeException = class(Exception);
 
   TSvSerializeFormat = (sstJson = 0, sstXML);
@@ -85,7 +90,7 @@ type
     class function GetValue(AProp: TRttiProperty; const AInstance: TValue): TValue;
   end;
 
-  TSvSerializerFactory = class
+  TSvAbstractSerializer = class
   private
     FOwner: TSvSerializer;
     FErrors: TList<string>;
@@ -102,6 +107,9 @@ type
     function GetObjectUniqueName(const AKey: string; obj: TObject): string; overload; virtual;
     function GetObjectUniqueName(const AKey: string; obj: TValue): string; overload; virtual;
     procedure PostError(const ErrorText: string); virtual;
+
+    function IsTypeEnumerable(ARttiType: TRttiType; out AEnumMethod: TRttiMethod): Boolean; virtual;
+    function IsTransient(AProp: TRttiProperty): Boolean;
   public
     constructor Create(AOwner: TSvSerializer); virtual;
     destructor Destroy; override;
@@ -119,7 +127,7 @@ type
   private
     FObjs: TDictionary<string, TPair<TValue,TStringDynArray>>;
     FSerializeFormat: TSvSerializeFormat;
-    FFactory: TSvSerializerFactory;
+    FFactory: TSvAbstractSerializer;
     procedure SetSerializeFormat(const Value: TSvSerializeFormat);
     function GetObject(const AName: string): TObject;
     function GetCount: Integer;
@@ -164,6 +172,8 @@ type
     property Objects[const AName: string]: TObject read GetObject; default;
 
     class function GetAttribute(AProp: TRttiProperty): SvSerialize;
+    class function TryGetAttribute(AProp: TRttiProperty; out AAtribute: SvSerialize): Boolean;
+    
     class function GetPropertyByName(const APropName: string; ARttiType: TRttiType): TRttiProperty;
     /// <summary>
     /// Deserializes all added objects from the file
@@ -227,15 +237,15 @@ type
     class function CreateType(ATypeInfo: PTypeInfo): TObject; overload;
 
     property ErrorCount: Integer read GetErrorCount;
-    property Factory: TSvSerializerFactory read FFactory;
+    property Factory: TSvAbstractSerializer read FFactory;
     property SerializeFormat: TSvSerializeFormat read FSerializeFormat write SetSerializeFormat;
   end;
 
 implementation
 
 uses
-  SvSerializerJsonFactory,
-  SvSerializerXMLFactory;
+  SvSerializerJson,
+  SvSerializerXML;
 
 { SvSerialize }
 
@@ -263,58 +273,58 @@ end;
 procedure TSvSerializer.AddObjectCustomProperties(const AKey: string; const obj: TObject;
   APropNames: array of string);
 var
-  APair: TPair<TValue,TStringDynArray>;
-  arr: TStringDynArray;
+  LPair: TPair<TValue,TStringDynArray>;
+  LArray: TStringDynArray;
   i: Integer;
 begin
   if Assigned(obj) then
   begin
-    APair.Key := obj;
-    SetLength(arr, Length(APropNames));
+    LPair.Key := obj;
+    SetLength(LArray, Length(APropNames));
     for i := Low(APropNames) to High(APropNames) do
     begin
-      arr[i] := APropNames[i];
+      LArray[i] := APropNames[i];
     end;
 
-    APair.Value := arr;
-    FObjs.AddOrSetValue(AKey, APair);
+    LPair.Value := LArray;
+    FObjs.AddOrSetValue(AKey, LPair);
   end;
 end;
 
 procedure TSvSerializer.AddObjectProperties(const AKey: string; const obj: TObject; AVisibilities: TSvVisibilities);
 var
-  rType: TRttiType;
-  ACurr: TRttiProperty;
-  arr: array of string;
-  FStrings: TStringlist;
+  LType: TRttiType;
+  LCurrProp: TRttiProperty;
+  LArray: array of string;
+  LStrings: TStringlist;
   i: Integer;
-  AValue: TValue;
+  LValue: TValue;
 begin
   if Assigned(obj) then
   begin
-    AValue := obj;
-    rType := TSvRttiInfo.GetType(AValue);
-    FStrings := TStringList.Create;
+    LValue := obj;
+    LType := TSvRttiInfo.GetType(LValue);
+    LStrings := TStringList.Create;
     try
-      for ACurr in rType.GetProperties do
+      for LCurrProp in LType.GetProperties do
       begin
-        if ACurr.Visibility in AVisibilities then
+        if LCurrProp.Visibility in AVisibilities then
         begin
-          FStrings.Add(ACurr.Name);
+          LStrings.Add(LCurrProp.Name);
         end;
 
       end;
 
-      SetLength(arr, FStrings.Count);
-      for i := 0 to FStrings.Count - 1 do
+      SetLength(LArray, LStrings.Count);
+      for i := 0 to LStrings.Count - 1 do
       begin
-        arr[i] := FStrings[i];
+        LArray[i] := LStrings[i];
       end;
 
-      AddObjectCustomProperties(AKey, obj, arr);
+      AddObjectCustomProperties(AKey, obj, LArray);
 
     finally
-      FStrings.Free;
+      LStrings.Free;
     end;
 
   end;
@@ -340,52 +350,51 @@ begin
     FreeAndNil(FFactory);
 
   case AFormat of
-    sstJson: FFactory := TSvJsonSerializerFactory.Create(Self);
+    sstJson: FFactory := TSvJsonSerializer.Create(Self);
     {$WARNINGS OFF}
-    sstXML: FFactory := TSvXMLSerializerFactory.Create(Self);
+    sstXML: FFactory := TSvXMLSerializer.Create(Self);
     {$WARNINGS ON}
   end;
 end;
 
 class function TSvSerializer.CreateType(ATypeInfo: PTypeInfo): TObject;
 var
-  rType: TRttiType;
-  AMethCreate: TRttiMethod;
-  instanceType: TRttiInstanceType;
+  LType: TRttiType;
+  LMethCreate: TRttiMethod;
+  LInstanceType: TRttiInstanceType;
 begin
-  rType := TSvRttiInfo.GetType(ATypeInfo);
-
-  for AMethCreate in rType.GetMethods do
+  LType := TSvRttiInfo.GetType(ATypeInfo);        
+  for LMethCreate in LType.GetMethods do
   begin
-    if (AMethCreate.IsConstructor) and (Length(AMethCreate.GetParameters) = 0) then
+    if (LMethCreate.IsConstructor) and (Length(LMethCreate.GetParameters) = 0) then
     begin
-      instanceType := rType.AsInstance;
+      LInstanceType := LType.AsInstance;
 
-      Result := AMethCreate.Invoke(instanceType.MetaclassType, []).AsObject;
+      Result := LMethCreate.Invoke(LInstanceType.MetaclassType, []).AsObject;
       Exit;
     end;
-  end;
+  end;  
   Result := nil;
 end;
 
 class function TSvSerializer.CreateType<T>: T;
 var
-  AValue: TValue;
-  rType: TRttiType;
-  AMethCreate: TRttiMethod;
-  instanceType: TRttiInstanceType;
+  LValue: TValue;
+  LType: TRttiType;
+  LMethCreate: TRttiMethod;
+  LInstanceType: TRttiInstanceType;
 begin
-  rType := TSvRttiInfo.GetType(TypeInfo(T));
+  LType := TSvRttiInfo.GetType(TypeInfo(T));
 
-  for AMethCreate in rType.GetMethods do
+  for LMethCreate in LType.GetMethods do
   begin
-    if (AMethCreate.IsConstructor) and (Length(AMethCreate.GetParameters) = 0) then
+    if (LMethCreate.IsConstructor) and (Length(LMethCreate.GetParameters) = 0) then
     begin
-      instanceType := rType.AsInstance;
+      LInstanceType := LType.AsInstance;
 
-      AValue := AMethCreate.Invoke(instanceType.MetaclassType, []);
+      LValue := LMethCreate.Invoke(LInstanceType.MetaclassType, []);
 
-      Result := AValue.AsType<T>;
+      Result := LValue.AsType<T>;
 
       Exit;
     end;
@@ -432,14 +441,14 @@ end;
 
 procedure TSvSerializer.DoDeSerialize(AStream: TStream);
 var
-  APair: TPair<string, TPair<TValue,TStringDynArray>>;
+  LPair: TPair<string, TPair<TValue,TStringDynArray>>;
 begin
   inherited;
   FFactory.BeginDeSerialization(AStream);
   try
-    for APair in FObjs do
+    for LPair in FObjs do
     begin
-      FFactory.DeSerializeObject(APair.Key, APair.Value.Key, AStream, APair.Value.Value);
+      FFactory.DeSerializeObject(LPair.Key, LPair.Value.Key, AStream, LPair.Value.Value);
     end;
   finally
     FFactory.EndDeSerialization(AStream);
@@ -448,15 +457,15 @@ end;
 
 procedure TSvSerializer.DoSerialize(AStream: TStream);
 var
-  APair: TPair<string, TPair<TValue,TStringDynArray>>;
+  LPair: TPair<string, TPair<TValue,TStringDynArray>>;
 begin
   inherited;
 
   FFactory.BeginSerialization;
   try
-    for APair in FObjs do
+    for LPair in FObjs do
     begin
-      FFactory.SerializeObject(APair.Key, APair.Value.Key, AStream, APair.Value.Value);
+      FFactory.SerializeObject(LPair.Key, LPair.Value.Key, AStream, LPair.Value.Value);
     end;
 
   finally
@@ -466,13 +475,13 @@ end;
 
 class function TSvSerializer.GetAttribute(AProp: TRttiProperty): SvSerialize;
 var
-  attr: TCustomAttribute;
+  LAttr: TCustomAttribute;
 begin
-  for attr in AProp.GetAttributes do
+  for LAttr in AProp.GetAttributes do
   begin
-    if attr is SvSerialize then
+    if LAttr is SvSerialize then
     begin
-      Exit(SvSerialize(attr));
+      Exit(SvSerialize(LAttr));
     end;
   end;
 
@@ -509,23 +518,23 @@ end;
 
 function TSvSerializer.GetObject(const AName: string): TObject;
 var
-  APair: TPair<TValue,TStringDynArray>;
+  LPair: TPair<TValue,TStringDynArray>;
 begin
-  if FObjs.TryGetValue(AName, APair) then
-    Result := APair.Key.AsObject
+  if FObjs.TryGetValue(AName, LPair) then
+    Result := LPair.Key.AsObject
   else
     Result := nil;
 end;
 
 class function TSvSerializer.GetPropertyByName(const APropName: string; ARttiType: TRttiType): TRttiProperty;
 var
-  AProp: TRttiProperty;
+  LProp: TRttiProperty;
 begin
-  for AProp in ARttiType.GetProperties do
+  for LProp in ARttiType.GetProperties do
   begin
-    if SameText(APropName, AProp.Name) then
+    if SameText(APropName, LProp.Name) then
     begin
-      Exit(AProp);
+      Exit(LProp);
     end;
   end;
   Result := nil;
@@ -549,13 +558,13 @@ end;
 
 procedure TSvSerializer.Marshall<T>(const AWhat: T; AToStream: TStream);
 var
-  AVal: TValue;
-  arr: TStringDynArray;
+  LValue: TValue;
+  LArray: TStringDynArray;
 begin
-  AVal := TValue.From<T>(AWhat);
+  LValue := TValue.From<T>(AWhat);
   FFactory.BeginSerialization;
   try
-    FFactory.SerializeObject('Main', AVal, AToStream, arr);
+    FFactory.SerializeObject('Main', LValue, AToStream, LArray);
   finally
     FFactory.EndSerialization;
   end;
@@ -577,19 +586,19 @@ end;
 
 procedure TSvSerializer.RemoveObject(const AObj: TObject);
 var
-  APair: TPair<string, TPair<TValue,TStringDynArray>>;
+  LPair: TPair<string, TPair<TValue,TStringDynArray>>;
   ptrLeft, ptrRight: Pointer;
 begin
   Assert(Assigned(AObj), 'Cannot remove nil object');
 
-  for APair in FObjs do
+  for LPair in FObjs do
   begin
     ptrLeft := AObj;
-    ptrRight := APair.Value.Key.AsObject;
+    ptrRight := LPair.Value.Key.AsObject;
 
     if ptrLeft = ptrRight then
     begin
-      RemoveObject(APair.Key);
+      RemoveObject(LPair.Key);
       Exit;
     end;
   end;
@@ -646,6 +655,13 @@ end;
 
 
 
+class function TSvSerializer.TryGetAttribute(AProp: TRttiProperty;
+  out AAtribute: SvSerialize): Boolean;
+begin
+  AAtribute := GetAttribute(AProp);
+  Result := Assigned(AAtribute);
+end;
+
 function TSvSerializer.UnMarshall<T>(const AFromString: string;
   AEncoding: TEncoding): T;
 var
@@ -661,19 +677,18 @@ end;
 
 function TSvSerializer.UnMarshall<T>(AFromStream: TStream): T;
 var
-  AVal: TValue;
-  arr: TStringDynArray;
-begin
-
+  LValue: TValue;
+  LArray: TStringDynArray;
+begin          
   //Result := T.Create;
-  AVal := TValue.From<T>(Result);
+  LValue := TValue.From<T>(Result);
   FFactory.BeginDeSerialization(AFromStream);
   try
-    FFactory.DeSerializeObject('Main', AVal, AFromStream, arr);
+    FFactory.DeSerializeObject('Main', LValue, AFromStream, LArray);
   finally
     FFactory.EndDeSerialization(AFromStream);
   end;
-  Result := AVal.AsType<T>;
+  Result := LValue.AsType<T>;
 end;
 
 function TSvSerializer.UnMarshall<T>(const AFromFilename: string): T;
@@ -690,7 +705,7 @@ end;
 
 { TSvSerializerFactory }
 
-function TSvSerializerFactory.GetObjectUniqueName(const AKey: string; obj: TObject): string;
+function TSvAbstractSerializer.GetObjectUniqueName(const AKey: string; obj: TObject): string;
 begin
   if Assigned(obj) then
   begin
@@ -702,35 +717,35 @@ begin
   end;
 end;
 
-procedure TSvSerializerFactory.BeginDeSerialization(AStream: TStream);
+procedure TSvAbstractSerializer.BeginDeSerialization(AStream: TStream);
 begin
   ClearErrors;
 end;
 
-procedure TSvSerializerFactory.BeginSerialization;
+procedure TSvAbstractSerializer.BeginSerialization;
 begin
   ClearErrors;
 end;
 
-procedure TSvSerializerFactory.ClearErrors;
+procedure TSvAbstractSerializer.ClearErrors;
 begin
   FErrors.Clear;
 end;
 
-constructor TSvSerializerFactory.Create(AOwner: TSvSerializer);
+constructor TSvAbstractSerializer.Create(AOwner: TSvSerializer);
 begin
   inherited Create();
   FOwner := AOwner;
   FErrors := TList<string>.Create;
 end;
 
-destructor TSvSerializerFactory.Destroy;
+destructor TSvAbstractSerializer.Destroy;
 begin
   FErrors.Free;
   inherited Destroy;
 end;
 
-function TSvSerializerFactory.GetObjectUniqueName(const AKey: string; obj: TValue): string;
+function TSvAbstractSerializer.GetObjectUniqueName(const AKey: string; obj: TValue): string;
 begin
   if not obj.IsEmpty then
   begin
@@ -742,7 +757,31 @@ begin
   end;
 end;
 
-procedure TSvSerializerFactory.PostError(const ErrorText: string);
+function TSvAbstractSerializer.IsTransient(AProp: TRttiProperty): Boolean;
+var
+  LAttrib: TCustomAttribute;
+begin
+  if Assigned(AProp) then
+  begin
+    for LAttrib in AProp.GetAttributes do
+    begin
+      if LAttrib is SvTransientAttribute then
+      begin
+        Exit(True);
+      end;
+    end;
+  end;
+  Result := False;
+end;
+
+function TSvAbstractSerializer.IsTypeEnumerable(ARttiType: TRttiType; out AEnumMethod: TRttiMethod): Boolean;
+begin
+  AEnumMethod := ARttiType.GetMethod('GetEnumerator');     
+  Result := Assigned(AEnumMethod);
+end;
+
+
+procedure TSvAbstractSerializer.PostError(const ErrorText: string);
 begin
   if ErrorText <> '' then
     FErrors.Add(ErrorText);
@@ -767,10 +806,10 @@ end;
 
 class function TSvRttiInfo.GetBasicMethod(const AMethodName: string; AType: TRttiType): TRttiMethod;
 var
-  AMethod: TRttiMethod;
+  LMethod: TRttiMethod;
   iParCount, iCurrParCount, iCount: Integer;
 begin
-  AMethod := nil;
+  LMethod := nil;
   iParCount := 0;
   iCurrParCount := 0;
   for Result in AType.GetMethods do
@@ -790,12 +829,12 @@ begin
         end;
 
         iCurrParCount := iCount;
-        AMethod := Result;
+        LMethod := Result;
       end;
     end;
   end;
 
-  Result := AMethod;
+  Result := LMethod;
 end;
 
 class function TSvRttiInfo.GetPackages: TArray<TRttiPackage>;
