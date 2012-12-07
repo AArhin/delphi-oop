@@ -21,6 +21,44 @@ type
 
   TNumbers = set of TDemoEnum;
 
+
+  TBeanSuperSuper = class
+  private
+    FName: string;
+  public
+    [SvSerialize]
+    property Name: string read FName write FName;
+  end;
+
+  TBeanSuper = class
+  private
+    FLastName: string;
+    FBean: TBeanSuperSuper;
+  public
+    constructor Create(); virtual;
+    destructor Destroy; override;
+
+    [SvSerialize]
+    property Bean: TBeanSuperSuper read FBean write FBean;
+    [SvSerialize]
+    property LastName: string read FLastName write FLastName;
+  end;
+
+  TBean = class
+  private
+    FBeanSuper: TBeanSuper;
+    FFirstName: string;
+  public
+    constructor Create(); virtual;
+    destructor Destroy; override;
+
+    [SvSerialize]
+    property FirstName: string read FFirstName write FFirstName;
+    [SvSerialize]
+    property BeanSuper: TBeanSuper read FBeanSuper write FBeanSuper;
+  end;
+
+
   TMyRec = record
   private
     FString: string;
@@ -44,6 +82,8 @@ type
     [SvSerialize]
     property Name: string read GetName write SetName;
   end;
+
+
 
 
   (* say our JQGrid defined as:
@@ -209,6 +249,7 @@ type
     procedure TestSQLiteSerializeDeserialize();
     procedure TestSimpleClassInside;
     procedure TestSimpleArrayTValue();
+    procedure TestOwnedObjects();
   end;
 
 implementation
@@ -506,6 +547,42 @@ begin
     CheckEquals(10, obj.InvData.RecordCount);
   finally
     obj.Free;
+  end;
+end;
+
+procedure TestTSvJsonSerializerFactory.TestOwnedObjects;
+var
+  LBean: TBean;
+  LJsonString: string;
+begin
+  LBean := TBean.Create;
+  try
+    LJsonString := '';
+    LBean.FirstName := 'Bob';
+    LBean.BeanSuper := TBeanSuper.Create;
+    LBean.BeanSuper.LastName := 'Marley';
+    LBean.BeanSuper.Bean := TBeanSuperSuper.Create;
+    LBean.BeanSuper.Bean.Name := 'Junior';
+
+    FSerializer.AddObject('', LBean);
+
+    FSerializer.Serialize(LJsonString, TEncoding.UTF8);
+    CheckTrue(LJsonString <> '');
+
+    FSerializer.ClearObjects;
+
+    LBean.Free;
+    LBean := TBean.Create;
+
+    FSerializer.AddObject('', LBean);
+    FSerializer.DeSerialize(LJsonString, TEncoding.UTF8);
+
+    CheckEqualsString('Bob', LBean.FirstName);
+    CheckEqualsString('Marley', LBean.BeanSuper.LastName);
+    CheckEqualsString('Junior', LBean.BeanSuper.Bean.Name);
+
+  finally
+    LBean.Free;
   end;
 end;
 
@@ -970,6 +1047,34 @@ end;
 destructor TSimple.Destroy;
 begin
   FAList.Free;
+  inherited;
+end;
+
+{ TBean }
+
+constructor TBean.Create;
+begin
+  inherited;
+ // FBeanSuper := TBeanSuper.Create;
+end;
+
+destructor TBean.Destroy;
+begin
+  FBeanSuper.Free;
+  inherited;
+end;
+
+{ TBeanSuper }
+
+constructor TBeanSuper.Create;
+begin
+  inherited;
+ // FBean := TBeanSuperSuper.Create;
+end;
+
+destructor TBeanSuper.Destroy;
+begin
+  FBean.Free;
   inherited;
 end;
 
