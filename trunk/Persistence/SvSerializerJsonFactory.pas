@@ -344,8 +344,8 @@ begin
         //other object types
         Result := TJSONObject.Create;
           //try to serialize
-        TJSONObject(Result).AddPair(TJSONPair.Create(CT_QUALIFIEDNAME,
-          TSvJsonString.Create(rType.QualifiedName)));
+       // TJSONObject(Result).AddPair(TJSONPair.Create(CT_QUALIFIEDNAME,
+       //   TSvJsonString.Create(rType.QualifiedName)));
 
         //serialize TDataset
         for lCurrentProp in rType.GetProperties do
@@ -655,15 +655,20 @@ begin
       tkClass:
       begin
         //AType := TSvRttiInfo.GetType(AType.Handle);
-        if Assigned(AProp) then
+        if Assigned(AProp) and (AObj.AsObject <> nil) then
         begin
           Result := TSvRttiInfo.GetValue(AProp, AObj);
+          if Result.AsObject = nil then
+          begin
+            Result := TSvSerializer.CreateType(AType.Handle);
+          end;
+
           for i := 0 to AJsonObject.Size - 1 do
           begin
             CurrProp := AType.GetProperty(AJsonObject.Get(i).JsonString.Value);
             if Assigned(CurrProp) then
             begin
-              CurrProp.SetValue(Result.AsObject, SetValue(AJsonObject.Get(i).JsonValue, AObj, CurrProp,
+              CurrProp.SetValue(Result.AsObject, SetValue(AJsonObject.Get(i).JsonValue, Result {AObj}, CurrProp,
                 CurrProp.PropertyType, ASkip));
             end;
           end;
@@ -681,7 +686,7 @@ begin
               CurrProp := AType.GetProperty(AJsonObject.Get(i).JsonString.Value);
               if Assigned(CurrProp) then
               begin
-                CurrProp.SetValue(Result.AsObject, SetValue(AJsonObject.Get(i).JsonValue, AObj, CurrProp,
+                CurrProp.SetValue(Result.AsObject, SetValue(AJsonObject.Get(i).JsonValue, Result, CurrProp,
                   CurrProp.PropertyType, ASkip));
               end;
             end;
