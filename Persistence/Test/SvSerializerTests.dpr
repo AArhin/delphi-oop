@@ -19,12 +19,13 @@ uses
   TestFramework,
   GUITestRunner,
   TextTestRunner,
-  TestSvSerializerJsonFactory in 'TestSvSerializerJsonFactory.pas',
-  SvSerializerJsonFactory in '..\SvSerializerJsonFactory.pas',
+  TestSvSerializerJson in 'TestSvSerializerJson.pas',
+  SvSerializerJson in '..\SvSerializerJson.pas',
   SvSerializer in '..\SvSerializer.pas',
   SQLite3 in 'SQLite3.pas',
   SQLiteTable3 in 'SQLiteTable3.pas',
-  SvSerializer.Extensions.SQLite in '..\SvSerializer.Extensions.SQLite.pas';
+  SvSerializer.Extensions.SQLite in '..\SvSerializer.Extensions.SQLite.pas',
+  SvSerializerXML in '..\SvSerializerXML.pas';
 
 {$R *.RES}
 
