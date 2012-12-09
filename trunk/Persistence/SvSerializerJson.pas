@@ -595,6 +595,8 @@ begin
             if bCreated then
             begin
               Result := LValue;
+              ASkip := False;
+              Exit;
             end;
             ASkip := True;
           end;
@@ -667,7 +669,7 @@ begin
         if Assigned(AProp) and (AObj.AsObject <> nil) then
         begin
           Result := TSvRttiInfo.GetValue(AProp, AObj);
-          if Result.AsObject = nil then
+          if (Result.IsObject) and (Result.AsObject = nil) then
           begin
             Result := TSvSerializer.CreateType(AType.Handle);
           end;
@@ -681,7 +683,8 @@ begin
               begin
                 Continue;
               end;
-              LCurrProp.SetValue(Result.AsObject, SetValue(AJsonObject.Get(i).JsonValue, Result {AObj}, LCurrProp,
+
+              LCurrProp.SetValue(GetRawPointer(Result), SetValue(AJsonObject.Get(i).JsonValue, Result {AObj}, LCurrProp,
                 LCurrProp.PropertyType, ASkip));
             end;
           end;

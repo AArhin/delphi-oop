@@ -109,6 +109,7 @@ type
 
     function IsTypeEnumerable(ARttiType: TRttiType; out AEnumMethod: TRttiMethod): Boolean; virtual;
     function IsTransient(AProp: TRttiProperty): Boolean;
+    function GetRawPointer(const AValue: TValue): Pointer;
   public
     constructor Create(AOwner: TSvSerializer); virtual;
     destructor Destroy; override;
@@ -757,6 +758,14 @@ begin
   begin
     raise ESvSerializeException.Create('Cannot get object unique name. Object cannot be nil');
   end;
+end;
+
+function TSvAbstractSerializer.GetRawPointer(const AValue: TValue): Pointer;
+begin
+  if AValue.IsObject then
+    Result := AValue.AsObject
+  else
+    Result := AValue.GetReferenceToRawData;
 end;
 
 function TSvAbstractSerializer.IsTransient(AProp: TRttiProperty): Boolean;
