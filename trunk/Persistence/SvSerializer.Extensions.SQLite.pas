@@ -104,7 +104,7 @@ begin
   try
     if not db.TableExists(TABLENAME) then
     begin
-      Factory.Errors.Add(ERR_INCOMPATIBLE_FILE);
+      AbstractSerializer.Errors.Add(ERR_INCOMPATIBLE_FILE);
       raise ESQLiteSerializerException.Create(ERR_INCOMPATIBLE_FILE + '. File: ' + AFromFilename);
     end;
 
@@ -112,14 +112,14 @@ begin
 
     if Qry.EOF then
     begin
-      Factory.Errors.Add(ERR_CANNOT_FIND_DATA);
+      AbstractSerializer.Errors.Add(ERR_CANNOT_FIND_DATA);
       Exit;
     end;
 
     Stream := Qry.Fields[0].AsBlob;
     if not Assigned(Stream) then
     begin
-      Factory.Errors.Add(ERR_CANNOT_RETRIEVE_DATA);
+      AbstractSerializer.Errors.Add(ERR_CANNOT_RETRIEVE_DATA);
       Exit;
     end;
 
@@ -159,7 +159,7 @@ begin
 
     if iRows < 1 then
     begin
-      Factory.Errors.Add(ERR_UPDATE);
+      AbstractSerializer.Errors.Add(ERR_UPDATE);
     end;
 
   finally

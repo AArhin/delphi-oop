@@ -8,7 +8,6 @@
 
 unit SvSerializerJson;
 
-{$I sv.inc}
 interface
 
 uses

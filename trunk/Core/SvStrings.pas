@@ -8,7 +8,6 @@
 
 unit SvStrings;
 
-{$I sv.inc}
 interface
 
 uses
@@ -673,7 +672,7 @@ begin
   strInput:= TStringStream.Create(FValue);
   strOutput:= TStringStream.Create;
   try
-    Zipper:= TZCompressionStream.Create(strOutput, TZCompressionLevel(ACompressionLevel) {$IFDEF DELPHI16_UP}, 128 {$ENDIF});
+    Zipper:= TZCompressionStream.Create(strOutput, TZCompressionLevel(ACompressionLevel) {$IF CompilerVersion > 22} , 128 {$ENDIF});
     try
       Zipper.CopyFrom(strInput, strInput.Size);
     finally
