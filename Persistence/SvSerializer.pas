@@ -35,7 +35,6 @@
 
 unit SvSerializer;
 
-{$I sv.inc}
 interface
 
 uses
@@ -127,18 +126,15 @@ type
   private
     FObjs: TDictionary<string, TPair<TValue,TStringDynArray>>;
     FSerializeFormat: TSvSerializeFormat;
-    FFactory: TSvAbstractSerializer;
+    FAbstractSerializer: TSvAbstractSerializer;
     procedure SetSerializeFormat(const Value: TSvSerializeFormat);
     function GetObject(const AName: string): TObject;
     function GetCount: Integer;
     function GetErrorCount: Integer;
   protected
-    procedure CreateFactory(AFormat: TSvSerializeFormat); virtual;
-
+    procedure CreateConcreateSerializer(AFormat: TSvSerializeFormat); virtual;
     procedure DoSerialize(AStream: TStream); virtual;
     procedure DoDeSerialize(AStream: TStream); virtual;
-
-
   public
     constructor Create(AFormat: TSvSerializeFormat = sstJson); virtual;
     destructor Destroy; override;
@@ -237,8 +233,14 @@ type
     class function CreateType(ATypeInfo: PTypeInfo): TObject; overload;
 
     property ErrorCount: Integer read GetErrorCount;
-    property Factory: TSvAbstractSerializer read FFactory;
+    property AbstractSerializer: TSvAbstractSerializer read FAbstractSerializer;
     property SerializeFormat: TSvSerializeFormat read FSerializeFormat write SetSerializeFormat;
+  end;
+
+  TSvObjectHelper = class helper for TObject
+  public
+    function ToJsonString(): string;
+    constructor FromJsonString(const AJsonString: string);
   end;
 
 implementation
@@ -340,19 +342,19 @@ begin
   inherited Create();
   FSerializeFormat := AFormat;
   FObjs := TDictionary<string, TPair<TValue,TStringDynArray>>.Create();
-  FFactory := nil;
-  CreateFactory(FSerializeFormat);
+  FAbstractSerializer := nil;
+  CreateConcreateSerializer(FSerializeFormat);
 end;
 
-procedure TSvSerializer.CreateFactory(AFormat: TSvSerializeFormat);
+procedure TSvSerializer.CreateConcreateSerializer(AFormat: TSvSerializeFormat);
 begin
-  if Assigned(FFactory) then
-    FreeAndNil(FFactory);
+  if Assigned(FAbstractSerializer) then
+    FreeAndNil(FAbstractSerializer);
 
   case AFormat of
-    sstJson: FFactory := TSvJsonSerializer.Create(Self);
+    sstJson: FAbstractSerializer := TSvJsonSerializer.Create(Self);
     {$WARNINGS OFF}
-    sstXML: FFactory := TSvXMLSerializer.Create(Self);
+    sstXML: FAbstractSerializer := TSvXMLSerializer.Create(Self);
     {$WARNINGS ON}
   end;
 end;
@@ -435,7 +437,7 @@ end;
 destructor TSvSerializer.Destroy;
 begin
   FObjs.Free;
-  FFactory.Free;
+  FAbstractSerializer.Free;
   inherited Destroy;
 end;
 
@@ -444,14 +446,14 @@ var
   LPair: TPair<string, TPair<TValue,TStringDynArray>>;
 begin
   inherited;
-  FFactory.BeginDeSerialization(AStream);
+  FAbstractSerializer.BeginDeSerialization(AStream);
   try
     for LPair in FObjs do
     begin
-      FFactory.DeSerializeObject(LPair.Key, LPair.Value.Key, AStream, LPair.Value.Value);
+      FAbstractSerializer.DeSerializeObject(LPair.Key, LPair.Value.Key, AStream, LPair.Value.Value);
     end;
   finally
-    FFactory.EndDeSerialization(AStream);
+    FAbstractSerializer.EndDeSerialization(AStream);
   end;
 end;
 
@@ -461,15 +463,15 @@ var
 begin
   inherited;
 
-  FFactory.BeginSerialization;
+  FAbstractSerializer.BeginSerialization;
   try
     for LPair in FObjs do
     begin
-      FFactory.SerializeObject(LPair.Key, LPair.Value.Key, AStream, LPair.Value.Value);
+      FAbstractSerializer.SerializeObject(LPair.Key, LPair.Value.Key, AStream, LPair.Value.Value);
     end;
 
   finally
-    FFactory.EndSerialization;
+    FAbstractSerializer.EndSerialization;
   end;
 end;
 
@@ -495,12 +497,12 @@ end;
 
 function TSvSerializer.GetErrorCount: Integer;
 begin
-  Result := FFactory.FErrors.Count;
+  Result := FAbstractSerializer.FErrors.Count;
 end;
 
 function TSvSerializer.GetErrors: TArray<string>;
 begin
-  Result := FFactory.FErrors.ToArray;
+  Result := FAbstractSerializer.FErrors.ToArray;
 end;
 
 function TSvSerializer.GetErrorsAsString: string;
@@ -509,7 +511,7 @@ var
   I: Integer;
 begin
   Result := '';
-  LErrors := FFactory.FErrors;
+  LErrors := FAbstractSerializer.FErrors;
   for I := 0 to LErrors.Count - 1 do
   begin
     Result := Result + LErrors[I] + #13#10;
@@ -562,11 +564,11 @@ var
   LArray: TStringDynArray;
 begin
   LValue := TValue.From<T>(AWhat);
-  FFactory.BeginSerialization;
+  FAbstractSerializer.BeginSerialization;
   try
-    FFactory.SerializeObject('Main', LValue, AToStream, LArray);
+    FAbstractSerializer.SerializeObject('Main', LValue, AToStream, LArray);
   finally
-    FFactory.EndSerialization;
+    FAbstractSerializer.EndSerialization;
   end;
 end;
 
@@ -648,7 +650,7 @@ begin
   begin
     FSerializeFormat := Value;
 
-    CreateFactory(FSerializeFormat);
+    CreateConcreateSerializer(FSerializeFormat);
   end;
 
 end;
@@ -682,11 +684,11 @@ var
 begin          
   //Result := T.Create;
   LValue := TValue.From<T>(Result);
-  FFactory.BeginDeSerialization(AFromStream);
+  FAbstractSerializer.BeginDeSerialization(AFromStream);
   try
-    FFactory.DeSerializeObject('Main', LValue, AFromStream, LArray);
+    FAbstractSerializer.DeSerializeObject('Main', LValue, AFromStream, LArray);
   finally
-    FFactory.EndDeSerialization(AFromStream);
+    FAbstractSerializer.EndDeSerialization(AFromStream);
   end;
   Result := LValue.AsType<T>;
 end;
@@ -884,6 +886,35 @@ end;
 class function TSvRttiInfo.GetType(const Value: TValue): TRttiType;
 begin
   Result := GetType(Value.TypeInfo);
+end;
+
+{ TSvObjectHelper }
+
+constructor TSvObjectHelper.FromJsonString(const AJsonString: string);
+var
+  LSerializer: TSvSerializer;
+begin
+  inherited Create();
+  LSerializer := TSvSerializer.Create(sstJson);
+  try
+    LSerializer.AddObject('', Self);
+    LSerializer.DeSerialize(AJsonString, TEncoding.UTF8);
+  finally
+    LSerializer.Free;
+  end;
+end;
+
+function TSvObjectHelper.ToJsonString: string;
+var
+  LSerializer: TSvSerializer;
+begin
+  LSerializer := TSvSerializer.Create(sstJson);
+  try
+    LSerializer.AddObject('', Self);
+    LSerializer.Serialize(Result, TEncoding.UTF8);
+  finally
+    LSerializer.Free;
+  end;
 end;
 
 end.

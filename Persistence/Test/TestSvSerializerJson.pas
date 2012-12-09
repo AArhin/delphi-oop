@@ -13,7 +13,7 @@ interface
 
 uses
   TestFramework, SysUtils, SvSerializer, SvSerializerJson,
-  Classes, Generics.Collections, Graphics, uSvStrings, DB, MidasLib, DBClient
+  Classes, Generics.Collections, Graphics, SvStrings, DB, MidasLib, DBClient
   ,Rtti;
 
 type
@@ -276,6 +276,7 @@ type
     procedure TestSimpleClassInside;
     procedure TestSimpleArrayTValue();
     procedure TestOwnedObjects();
+    procedure TestHelper();
   end;
 
 implementation
@@ -361,7 +362,7 @@ end;
 procedure TestTSvJsonSerializerFactory.SetUp;
 begin
   FSerializer := TSvSerializer.Create(sstJson);
-  FSvJsonSerializerFactory := TSvJsonSerializer(FSerializer.Factory);
+  FSvJsonSerializerFactory := TSvJsonSerializer(FSerializer.AbstractSerializer);
   FILE_SERIALIZE := 'TestSerialize.json';
 end;
 
@@ -549,6 +550,38 @@ begin
     [CTITERATIONS, iMs1, iMs2]));
 
   CheckTrue(iMs1 < iMs2);
+end;
+
+type
+  THelperTest = class
+  private
+    FFoo: string;
+  public
+    property Foo: string read FFoo write FFoo;
+  end;
+
+procedure TestTSvJsonSerializerFactory.TestHelper;
+var
+  LBean: THelperTest;
+  LJson: string;
+const
+  HELPER_JSON = '{"Foo":"Bar"}';
+begin
+  LBean := THelperTest.Create;
+  try
+    LBean.Foo := 'Bar';
+    LJson := LBean.ToJsonString();
+    CheckEqualsString(HELPER_JSON, LJson);
+  finally
+    LBean.Free;
+  end;
+
+  LBean := THelperTest.FromJsonString(HELPER_JSON);
+  try
+    CheckEqualsString('Bar', LBean.Foo);
+  finally
+    LBean.Free;
+  end;
 end;
 
 procedure TestTSvJsonSerializerFactory.TestJQGrid;
