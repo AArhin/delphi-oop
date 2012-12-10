@@ -241,7 +241,7 @@ type
     property Color: TColor read FColor write FColor;
     [SvSerialize('MyFont')]
     property Font: TFont read FFont write FFont;
-   // [SvSerialize]
+    [SvTransient]
     property Intf: IDemoObj read FIntf write FIntf;
     [SvSerialize]
     property Meth: TProc read FMeth write FMeth;

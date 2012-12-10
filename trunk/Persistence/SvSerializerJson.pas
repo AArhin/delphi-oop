@@ -93,7 +93,6 @@ begin
 
       if LBytes.Size > 0 then
       begin
-        
         LJsonVal := TJSONObject.ParseJSONValue(LBytes.Bytes, 0, LBytes.Size, True);
 
         if Assigned(LJsonVal) and (LJsonVal is TJSONObject) then
@@ -992,12 +991,11 @@ end;
 
 constructor TSvJsonString.Create(const AValue: string);
 begin
-//  {$IFDEF DELPHI16_UP}
-  //it seems that XE2 escapes string properly. Update: XE2 leaves unicode characters unescaped though...
-//  inherited Create(AValue);
- // {$ELSE}
+  {$IF CompilerVersion >= 23}
+  inherited Create(AValue);
+  {$ELSE}
   inherited Create(EscapeValue(AValue));
- // {$ENDIF}
+  {$IFEND}
 end;
 
 function TSvJsonString.EscapeValue(const AValue: string): string;

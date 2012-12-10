@@ -26,7 +26,6 @@ uses
   SvBindings.Converters in '..\SvBindings.Converters.pas',
   SvBindings in '..\SvBindings.pas',
   SvBindings.Validation in '..\SvBindings.Validation.pas',
-  SvBindings.VCLControls in '..\SvBindings.VCLControls.pas',
   SvDesignPatterns in '..\..\Core\SvDesignPatterns.pas',
   SvRttiUtils in '..\..\Core\SvRttiUtils.pas',
   ViewTestBindings in 'ViewTestBindings.pas' {frmTest},
