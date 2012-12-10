@@ -260,23 +260,33 @@ type
   strict private
     FILE_SERIALIZE: string;
     FSerializer: TSvSerializer;
-    FSvJsonSerializerFactory: TSvJsonSerializer;
+    FSvJsonSerializerFactory: ISerializer;
+    FSerializerType: TSvSerializeFormat;
   public
     procedure SetUp; override;
     procedure TearDown; override;
+    property SerializerType: TSvSerializeFormat read FSerializerType write FSerializerType;
+  protected
+    procedure TestEscapeValue();
   published
     //test methods
     procedure TestSerializeAndDeserialize();
     procedure TestAddObjectProperties();
     procedure TestRemoveObject();
     procedure TestSerializeRecord();
-    procedure TestEscapeValue();
+
     procedure TestJQGrid();
     procedure TestSQLiteSerializeDeserialize();
     procedure TestSimpleClassInside;
     procedure TestSimpleArrayTValue();
     procedure TestOwnedObjects();
     procedure TestHelper();
+  end;
+
+  TestTSvSuperJsonSerializer = class(TestTSvJsonSerializerFactory)
+  public
+    procedure SetUp; override;
+    procedure TearDown; override;
   end;
 
 implementation
@@ -361,8 +371,8 @@ end;
 
 procedure TestTSvJsonSerializerFactory.SetUp;
 begin
-  FSerializer := TSvSerializer.Create(sstJson);
-  FSvJsonSerializerFactory := TSvJsonSerializer(FSerializer.AbstractSerializer);
+  FSerializer := TSvSerializer.Create(FSerializerType);
+  FSvJsonSerializerFactory := FSerializer.CreateConcreateSerializer;
   FILE_SERIALIZE := 'TestSerialize.json';
 end;
 
@@ -1179,8 +1189,22 @@ begin
   inherited Create(True);
 end;
 
+{ TestTSvSuperJsonSerializer }
+
+procedure TestTSvSuperJsonSerializer.SetUp;
+begin
+  SerializerType := sstSuperJson;
+  inherited;
+end;
+
+procedure TestTSvSuperJsonSerializer.TearDown;
+begin
+  inherited;
+end;
+
 initialization
   // Register any test cases with the test runner
   RegisterTest(TestTSvJsonSerializerFactory.Suite);
+  RegisterTest(TestTSvSuperJsonSerializer.Suite);
 end.
 
