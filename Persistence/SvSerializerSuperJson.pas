@@ -1,59 +1,53 @@
-﻿{*******************************************************}
+{*******************************************************}
 {                                                       }
-{       SvSerializerJson                                }
+{       SvSerializerSuperJson                           }
 {                                                       }
-{       Copyright (C) 2011 "Linas Naginionis"           }
+{       Copyright (C) 2012 "Linas Naginionis"           }
 {                                                       }
 {*******************************************************}
-
-unit SvSerializerJson;
+unit SvSerializerSuperJson;
 
 interface
 
 uses
-  Classes, SvSerializer, SysUtils, DBXJSON, Rtti, Types;
+  Classes, SvSerializer, SysUtils, superobject, Rtti, Types;
 
 type
-  TSvJsonString = class(TJSONString)
+  TSvSuperJsonSerializer = class(TSvAbstractSerializer<ISuperObject>)
   private
-    function EscapeValue(const AValue: string): string;
-  public
-    constructor Create(const AValue: string); overload;
-  end;
-
-  TSvJsonSerializer = class(TSvAbstractSerializer<TJSONValue>)
-  private
-    FMainObj: TJSONObject;
+    FMainObj: ISuperObject;
   protected
     procedure BeginSerialization(); override;
     procedure EndSerialization(); override;
     procedure BeginDeSerialization(AStream: TStream); override;
     procedure EndDeSerialization(AStream: TStream); override;
 
-    function DoSetFromNumber(AJsonNumber: TJSONValue): TValue; override;
-    function DoSetFromString(AJsonString: TJSONValue; AType: TRttiType; var ASkip: Boolean): TValue; override;
-    function DoSetFromArray(AJsonArray: TJSONValue; AType: TRttiType; const AObj: TValue; AProp: TRttiProperty; var ASkip: Boolean): TValue; override;
-    function DoSetFromObject(AJsonObject: TJSONValue; AType: TRttiType; const AObj: TValue; AProp: TRttiProperty; var ASkip: Boolean): TValue; override;
+    function DoSetFromNumber(AJsonNumber: ISuperObject): TValue; override;
+    function DoSetFromString(AJsonString: ISuperObject; AType: TRttiType; var ASkip: Boolean): TValue; override;
+    function DoSetFromArray(AJsonArray: ISuperObject; AType: TRttiType; const AObj: TValue; AProp: TRttiProperty; var ASkip: Boolean): TValue; override;
+    function DoSetFromObject(AJsonObject: ISuperObject; AType: TRttiType; const AObj: TValue; AProp: TRttiProperty; var ASkip: Boolean): TValue; override;
 
-    function DoGetFromArray(const AFrom: TValue; AProp: TRttiProperty): TJSONValue; override;
-    function DoGetFromClass(const AFrom: TValue; AProp: TRttiProperty): TJSONValue; override;
-    function DoGetFromEnum(const AFrom: TValue; AProp: TRttiProperty): TJSONValue; override;
-    function DoGetFromRecord(const AFrom: TValue; AProp: TRttiProperty): TJSONValue; override;
-    function DoGetFromVariant(const AFrom: TValue; AProp: TRttiProperty): TJSONValue; override;
+    function DoGetFromArray(const AFrom: TValue; AProp: TRttiProperty): ISuperObject; override;
+    function DoGetFromClass(const AFrom: TValue; AProp: TRttiProperty): ISuperObject; override;
+    function DoGetFromEnum(const AFrom: TValue; AProp: TRttiProperty): ISuperObject; override;
+    function DoGetFromRecord(const AFrom: TValue; AProp: TRttiProperty): ISuperObject; override;
+    function DoGetFromVariant(const AFrom: TValue; AProp: TRttiProperty): ISuperObject; override;
 
     function ToString(): string; override;
-  
+    function SOString(const AValue: string): ISuperObject;
+
     procedure SerializeObject(const AKey: string; const obj: TValue; AStream: TStream;
       ACustomProps: TStringDynArray); override;
     procedure DeSerializeObject(const AKey: string; obj: TValue; AStream: TStream;
       ACustomProps: TStringDynArray); override;
 
-    function GetValue(const AFrom: TValue; AProp: TRttiProperty): TJSONValue; override;
-    function SetValue(const AFrom: TJSONValue; const AObj: TValue; AProp: TRttiProperty; AType: TRttiType; var Skip: Boolean): TValue; override;
+    function GetValue(const AFrom: TValue; AProp: TRttiProperty): ISuperObject; override;
+    function SetValue(const AFrom: ISuperObject; const AObj: TValue; AProp: TRttiProperty; AType: TRttiType; var Skip: Boolean): TValue; override;
+
+    function GetValueAsVariant(AObject: ISuperObject): Variant;
   public
     constructor Create(AOwner: TSvSerializer); override;
     destructor Destroy; override;
-    
   end;
 
 implementation
@@ -64,81 +58,39 @@ uses
   StrUtils,
   DB;
 
-const
-  CT_QUALIFIEDNAME = 'QualifiedName';
-  CT_DATASET_RECORDS = 'rows';
+{ TSvSuperJsonSerializer }
 
-{ TSvJsonSerializerFactory }
-
-procedure TSvJsonSerializer.BeginDeSerialization(AStream: TStream);
-var
-  LBytes: TBytesStream;
-  LJsonVal: TJSONValue;
+procedure TSvSuperJsonSerializer.BeginDeSerialization(AStream: TStream);
 begin
   inherited;
-  FMainObj := nil;
-
-  if Assigned(AStream) then
-  begin
-    //parse json stream
-    LBytes := TBytesStream.Create();
-    try
-      LBytes.CopyFrom(AStream, AStream.Size);
-      LBytes.Position := 0;
-
-      if LBytes.Size > 0 then
-      begin
-        LJsonVal := TJSONObject.ParseJSONValue(LBytes.Bytes, 0, LBytes.Size, True);
-
-        if Assigned(LJsonVal) and (LJsonVal is TJSONObject) then
-        begin
-          FMainObj := TJSONObject(LJsonVal);
-        end;
-      end;
-      
-    finally
-      LBytes.Free;
-    end;
-  end
-  else
-  begin
-    PostError('Cannot deserialize from nil stream');
-    raise ESvSerializeException.Create('Cannot deserialize from nil stream');
-  end;
+  FMainObj := TSuperObject.ParseStream(AStream, False);
 end;
 
-procedure TSvJsonSerializer.EndDeSerialization(AStream: TStream);
+procedure TSvSuperJsonSerializer.BeginSerialization;
 begin
   inherited;
-  if Assigned(FMainObj) then
-    FMainObj.Free;
+  FMainObj := SO();
 end;
 
-procedure TSvJsonSerializer.BeginSerialization;
-begin
-  inherited;
-  FMainObj := TJSONObject.Create;
-end;
-
-constructor TSvJsonSerializer.Create(AOwner: TSvSerializer);
+constructor TSvSuperJsonSerializer.Create(AOwner: TSvSerializer);
 begin
   inherited Create(AOwner);
   FMainObj := nil;
 end;
 
-procedure TSvJsonSerializer.DeSerializeObject(const AKey: string; obj: TValue;
-  AStream: TStream; ACustomProps: TStringDynArray);
+procedure TSvSuperJsonSerializer.DeSerializeObject(const AKey: string; obj: TValue; AStream: TStream;
+  ACustomProps: TStringDynArray);
 var
   LType: TRttiType;
   LProp: TRttiProperty;
   LValue: TValue;
-  LObject: TJSONObject;
-  LPair: TJSONPair;
+  LObject: ISuperObject;
   LPropName: string;
   I: Integer;
   LSkip: Boolean;
   LField: TRttiField;
   LAttrib: SvSerialize;
+  LSuperProp: ISuperObject;
 begin
   inherited;
   LObject := nil;
@@ -150,14 +102,10 @@ begin
     end
     else
     begin
-      LPair := FMainObj.Get(GetObjectUniqueName(AKey, obj));
-      if Assigned(LPair) and (LPair.JsonValue is TJSONObject) then
-      begin
-        LObject := TJSONObject(LPair.JsonValue);
-      end;
+      LObject := FMainObj.O[GetObjectUniqueName(AKey, obj)];
     end;
 
-    if Assigned(LObject) then
+    if Assigned(LObject) and (LObject.IsType(stObject)) then
     begin
       LType := TSvRttiInfo.GetType(obj);
 
@@ -169,10 +117,11 @@ begin
           if Assigned(LProp) and (LProp.IsWritable) then
           begin
             LPropName := LProp.Name;
-            LPair := LObject.Get(LPropName);
-            if Assigned(LPair) then
+
+            LSuperProp := LObject.O[LPropName];
+            if Assigned(LSuperProp) then
             begin
-              LValue := SetValue(LPair.JsonValue, obj, LProp, LProp.PropertyType, LSkip);
+              LValue := SetValue(LSuperProp, obj, LProp, LProp.PropertyType, LSkip);
               if not LSkip then
                 TSvRttiInfo.SetValue(LProp, obj, LValue);
             end;
@@ -186,10 +135,10 @@ begin
           for LField in LType.AsRecord.GetFields do
           begin
             LPropName := LField.Name;
-            LPair := LObject.Get(LPropName);
-            if Assigned(LPair) then
+            LSuperProp := LObject.O[LPropName];
+            if Assigned(LSuperProp) then
             begin
-              LValue := SetValue(LPair.JsonValue, obj, TRttiProperty(LField), LField.FieldType, LSkip);
+              LValue := SetValue(LSuperProp, obj, TRttiProperty(LField), LField.FieldType, LSkip);
               if not LSkip then
                 TSvRttiInfo.SetValue(LField, obj, LValue);
             end;
@@ -212,10 +161,10 @@ begin
                 LPropName := LAttrib.Name;
             end;
 
-            LPair := LObject.Get(LPropName);
-            if Assigned(LPair) then
+            LSuperProp := LObject.O[LPropName];
+            if Assigned(LSuperProp) then
             begin
-              LValue := SetValue(LPair.JsonValue, obj, LProp, LProp.PropertyType, LSkip);
+              LValue := SetValue(LSuperProp, obj, LProp, LProp.PropertyType, LSkip);
               if not LSkip then
                 TSvRttiInfo.SetValue(LProp, obj, LValue);
             end;
@@ -226,31 +175,30 @@ begin
   end;
 end;
 
-destructor TSvJsonSerializer.Destroy;
+destructor TSvSuperJsonSerializer.Destroy;
 begin
-  inherited Destroy;
+  FMainObj := nil;
+  inherited;
 end;
 
-function TSvJsonSerializer.DoGetFromArray(const AFrom: TValue;
-  AProp: TRttiProperty): TJSONValue;
+function TSvSuperJsonSerializer.DoGetFromArray(const AFrom: TValue; AProp: TRttiProperty): ISuperObject;
 var
   i: Integer;
-  LJsonArray: TJSONArray;
+  LJsonArray: TSuperArray;
 begin
-  Result := TJSONArray.Create();
-  LJsonArray := TJSONArray(Result);
+  Result := TSuperObject.Create(stArray);
+  LJsonArray := Result.AsArray;
   for i := 0 to AFrom.GetArrayLength - 1 do
   begin
-    LJsonArray.AddElement(GetValue(AFrom.GetArrayElement(i), nil));
+    LJsonArray.Add(GetValue(AFrom.GetArrayElement(i), nil));
   end;
 end;
 
-function TSvJsonSerializer.DoGetFromClass(const AFrom: TValue;
-  AProp: TRttiProperty): TJSONValue;
+function TSvSuperJsonSerializer.DoGetFromClass(const AFrom: TValue; AProp: TRttiProperty): ISuperObject;
 var
   i, iRecNo: Integer;
-  LJsonArray: TJSONArray;
-  LJsonObject: TJSONObject;
+  LJsonArray: TSuperArray;
+  LJsonObject: ISuperObject;
   LType, LEnumType: TRttiType;
   LEnumMethod, LMoveNextMethod: TRttiMethod;
   LEnumerator: TValue;
@@ -263,12 +211,8 @@ begin
   begin
     if AFrom.AsObject is TDataset then
     begin
-     // Result := TJSONObject.Create;
       LDst := TDataSet(AFrom.AsObject);
-
-      Result := TJSONArray.Create();
-     // TJSONObject(Result).AddPair(TJSONPair.Create(CT_DATASET_RECORDS,
-     //   Result));
+      Result := TSuperObject.Create(stArray);
       LDst.DisableControls;
       FormatSettings := FFormatSettings;
       try
@@ -276,20 +220,20 @@ begin
         LDst.First;
         while not LDst.Eof do
         begin
-          LJsonObject := TJSONObject.Create();
+          LJsonObject := TSuperObject.Create;
           for i := 0 to LDst.Fields.Count - 1 do
           begin
             if LDst.Fields[i].IsNull then
             begin
-              LJsonObject.AddPair(LDst.Fields[i].FieldName, TJSONNull.Create);
+              LJsonObject.N[LDst.Fields[i].FieldName] := TSuperObject.Create(stNull);
             end
             else
             begin
-              LJsonObject.AddPair(LDst.Fields[i].FieldName, TSvJsonString.Create(LDst.Fields[i].AsString));
+              LJsonObject.O[LDst.Fields[i].FieldName] := SOString(LDst.Fields[i].AsString);
             end;
 
           end;
-          TJSONArray(Result).AddElement(LJsonObject);
+          Result.AsArray.Add(LJsonObject);
           LDst.Next;
         end;
 
@@ -304,8 +248,8 @@ begin
       if IsTypeEnumerable(LType, LEnumMethod) then
       begin
         //enumerator exists
-        Result := TJSONArray.Create();
-        LJsonArray := TJSONArray(Result);
+        Result := TSuperObject.Create(stArray);
+        LJsonArray := Result.AsArray;
         LEnumerator := LEnumMethod.Invoke(AFrom,[]);
         LEnumType :=  TSvRttiInfo.GetType(LEnumerator.TypeInfo);
         LMoveNextMethod := LEnumType.GetMethod('MoveNext');
@@ -314,7 +258,7 @@ begin
         Assert(Assigned(LCurrentProp), 'Current property not found');
         while LMoveNextMethod.Invoke(LEnumerator.AsObject,[]).asBoolean do
         begin
-          LJsonArray.AddElement(GetValue(LCurrentProp.GetValue(LEnumerator.AsObject), LCurrentProp));
+          LJsonArray.Add(GetValue(LCurrentProp.GetValue(LEnumerator.AsObject), LCurrentProp));
         end;
 
         if LEnumerator.IsObject then
@@ -325,10 +269,8 @@ begin
       else
       begin
         //other object types
-        Result := TJSONObject.Create;
+        Result := TSuperObject.Create;
           //try to serialize
-       // TJSONObject(Result).AddPair(TJSONPair.Create(CT_QUALIFIEDNAME,
-       //   TSvJsonString.Create(rType.QualifiedName)));
 
         for LCurrentProp in LType.GetProperties do
         begin
@@ -339,8 +281,7 @@ begin
           if LCurrentProp.Visibility in [mvPublic,mvPublished] then
           begin
             //try to serialize only published properties
-            TJSONObject(Result).AddPair(TJSONPair.Create(LCurrentProp.Name,
-              GetValue(LCurrentProp.GetValue(AFrom.AsObject), LCurrentProp)));
+            Result.O[LCurrentProp.Name] := GetValue(LCurrentProp.GetValue(AFrom.AsObject), LCurrentProp);
           end;
         end;
       end;
@@ -348,26 +289,24 @@ begin
   end;
 end;
 
-function TSvJsonSerializer.DoGetFromEnum(const AFrom: TValue;
-  AProp: TRttiProperty): TJSONValue;
+function TSvSuperJsonSerializer.DoGetFromEnum(const AFrom: TValue; AProp: TRttiProperty): ISuperObject;
 var
   bVal: Boolean;
 begin
   if AFrom.TryAsType<Boolean>(bVal) then
   begin
     if bVal then
-      Result := TJSONTrue.Create
+      Result := SO(True)
     else
-      Result := TJSONFalse.Create;
+      Result := SO(False);
   end
   else
   begin
-    Result := TSvJsonString.Create(AFrom.ToString);
+    Result := SOString(AFrom.ToString);
   end;
 end;
 
-function TSvJsonSerializer.DoGetFromRecord(const AFrom: TValue;
-  AProp: TRttiProperty): TJSONValue;
+function TSvSuperJsonSerializer.DoGetFromRecord(const AFrom: TValue; AProp: TRttiProperty): ISuperObject;
 var
   LType: TRttiType;
   LRecordType: TRttiRecordType;
@@ -375,31 +314,29 @@ var
 begin
   LType := TSvRttiInfo.GetType(AFrom.TypeInfo);
   LRecordType := LType.AsRecord;
-  Result := TJSONObject.Create();
+  Result := SO;
   for LField in LRecordType.GetFields do
   begin
-    TJSONObject(Result).AddPair(TJSONPair.Create(LField.Name,
-      GetValue(LField.GetValue(AFrom.GetReferenceToRawData), nil)));
+    Result.O[LField.Name] := GetValue(LField.GetValue(AFrom.GetReferenceToRawData), nil);
   end;
 end;
 
-function TSvJsonSerializer.DoGetFromVariant(const AFrom: TValue;
-  AProp: TRttiProperty): TJSONValue;
+function TSvSuperJsonSerializer.DoGetFromVariant(const AFrom: TValue; AProp: TRttiProperty): ISuperObject;
 var
   LVariant: Variant;
 begin
   LVariant := AFrom.AsVariant;
 
   if VarIsNull(LVariant) or VarIsEmpty(LVariant) then
-    Result := TJSONNull.Create
+    Result := SO(Null)
   else
-    Result := TSvJsonString.Create(VarToStr(LVariant));
+    Result := SOString(VarToStr(LVariant));
 end;
 
-function TSvJsonSerializer.DoSetFromArray(AJsonArray: TJSONValue; AType: TRttiType;
-  const AObj: TValue; AProp: TRttiProperty; var ASkip: Boolean): TValue;
+function TSvSuperJsonSerializer.DoSetFromArray(AJsonArray: ISuperObject; AType: TRttiType; const AObj: TValue;
+  AProp: TRttiProperty; var ASkip: Boolean): TValue;
 var
-  LJsonValue: TJSONValue;
+  LJsonValue: ISuperObject;
   arrVal: array of TValue;
   i, x: Integer;
   LDst: TDataSet;
@@ -410,32 +347,34 @@ var
   bCreated: Boolean;
   LEnumMethod, LClearMethod: TRttiMethod;
   LParamsArray: TArray<TRttiParameter>;
-  LJsonArray: TJSONArray;
+  LJsonArray: TSuperArray;
+  LEntry: ISuperObject;
+  LEnum: TSuperAvlEntry;
 begin
   bCreated := False;
   LValue := TValue.Empty;
   if Assigned(AType) then
   begin
-    LJsonArray := AJsonArray as TJSONArray;
+    LJsonArray := AJsonArray.AsArray;
     case AType.TypeKind of
       tkArray:
       begin
-        SetLength(arrVal, LJsonArray.Size);
+        SetLength(arrVal, LJsonArray.Length);
 
         for i := 0 to Length(arrVal)-1 do
         begin
-          arrVal[i] := SetValue(LJsonArray.Get(i), AObj, AProp, TRttiArrayType(AType).ElementType, ASkip);
+          arrVal[i] := SetValue(LJsonArray.N[i], AObj, AProp, TRttiArrayType(AType).ElementType, ASkip);
         end;
 
         Result := TValue.FromArray(AType.Handle, arrVal);
       end;
       tkDynArray:
       begin
-        SetLength(arrVal, LJsonArray.Size);
+        SetLength(arrVal, LJsonArray.Length);
 
         for i := 0 to Length(arrVal)-1 do
         begin
-          arrVal[i] := SetValue(LJsonArray.Get(i), AObj, AProp, TRttiDynamicArrayType(AType).ElementType, ASkip);
+          arrVal[i] := SetValue(LJsonArray.N[i], AObj, AProp, TRttiDynamicArrayType(AType).ElementType, ASkip);
         end;
 
         Result := TValue.FromArray(AType.Handle, arrVal);
@@ -457,26 +396,19 @@ begin
                 LDst.DisableControls;
                 FormatSettings := FFormatSettings;
                 try
-                  for i := 0 to LJsonArray.Size - 1 do
+                  for i := 0 to LJsonArray.Length - 1 do
                   begin
                     try
                       LDst.Append;
-
-                      for x := 0 to TJSONObject(LJsonArray.Get(i)).Size - 1 do
+                      for LEnum in LJsonArray.N[i].AsObject do
                       begin
-                        //get fieldname from json object
-                        sVal := TJSONObject(LJsonArray.Get(i)).Get(x).JsonString.Value;
+                        sVal := LEnum.Name;
                         LField := LDst.FindField(sVal);
                         if Assigned(LField) then
                         begin
-                          //check if not null
-                          if TJSONObject(LJsonArray.Get(i)).Get(x).JsonValue is TJSONNull then
-                            LField.Clear
-                          else
-                            LField.AsString := TJSONObject(LJsonArray.Get(i)).Get(x).JsonValue.Value;
+                          LField.AsString := LEnum.Value.AsString;
                         end;
                       end;
-
                       LDst.Post;
                     except
                       on E:Exception do
@@ -485,7 +417,6 @@ begin
                       end;
                     end;
                   end;
-
                 finally
                   LDst.EnableControls;
                   FormatSettings := FOldFormatSettings;
@@ -535,26 +466,31 @@ begin
               SetLength(arrVal, Length(LParamsArray));
               //probably we are dealing with key value pair class like TDictionary
 
-              for i := 0 to LJsonArray.Size - 1 do
+              for i := 0 to LJsonArray.Length - 1 do
               begin
-                LJsonValue := LJsonArray.Get(i);
+                LJsonValue := LJsonArray.N[i];
 
-
-                Assert(Length(LParamsArray) = TJSONObject(LJsonValue).Size, 'Parameters count differ');
-                if LJsonValue is TJSONObject then
+                //Assert(Length(LParamsArray) = LJsonValue.AsArray.Length, 'Parameters count differ');
+                if LJsonValue.IsType(stObject) then
                 begin
-                  for x := 0 to TJSONObject(LJsonValue).Size - 1 do
+                  x := 0;
+                  for LEntry in LJsonValue do
                   begin
-                    arrVal[x] := SetValue(TJSONObject(LJsonValue).Get(x).JsonValue,
+                    arrVal[x] := SetValue(LEntry,
                       AObj, nil, LParamsArray[x].ParamType, ASkip);
+                    Inc(x);
                   end;
+                //  for x := 0 to TJSONObject(LJsonValue).Size - 1 do
+                //  begin
+
+                 // end;
                 end
-                else if LJsonValue is TJSONArray then
+                else if LJsonValue.IsType(stArray) then
                 begin
-                  for x := 0 to TJSONArray(LJsonValue).Size - 1 do
+                  for x := 0 to LJsonValue.AsArray.Length - 1 do
                   begin
                     arrVal[x] :=
-                      SetValue(TJSONArray(LJsonValue).Get(x), AObj, nil, LParamsArray[x].ParamType, ASkip);
+                      SetValue(LJsonValue.AsArray.N[x], AObj, nil, LParamsArray[x].ParamType, ASkip);
                   end;
                 end;
 
@@ -563,11 +499,11 @@ begin
             end
             else
             begin
-              SetLength(arrVal, LJsonArray.Size);
+              SetLength(arrVal, LJsonArray.Length);
 
               for i := 0 to Length(arrVal)-1 do
               begin
-                LJsonValue := LJsonArray.Get(i);
+                LJsonValue := LJsonArray.N[i];
 
                 {TODO -oLinas -cGeneral : fix arguments}
                 //AParams[0].ParamType.AsInstance.
@@ -598,13 +534,13 @@ begin
   end;
 end;
 
-function TSvJsonSerializer.DoSetFromNumber(AJsonNumber: TJSONValue): TValue;
+function TSvSuperJsonSerializer.DoSetFromNumber(AJsonNumber: ISuperObject): TValue;
 var
   sVal: string;
   LInt: Integer;
   LInt64: Int64;
 begin
-  sVal := AJsonNumber.ToString;
+  sVal := AJsonNumber.AsString;
 
   if TryStrToInt(sVal, LInt) then
   begin
@@ -616,38 +552,37 @@ begin
   end
   else
   begin
-    Result := (AJsonNumber as TJSONNumber).AsDouble;
+    Result := AJsonNumber.AsDouble;
   end;
 end;
 
-function TSvJsonSerializer.DoSetFromObject(AJsonObject: TJSONValue; AType: TRttiType;
-  const AObj: TValue; AProp: TRttiProperty; var ASkip: Boolean): TValue;
+function TSvSuperJsonSerializer.DoSetFromObject(AJsonObject: ISuperObject; AType: TRttiType; const AObj: TValue;
+  AProp: TRttiProperty; var ASkip: Boolean): TValue;
 var
-  i: Integer;
   LField: TRttiField ;
   LRecordType: TRttiRecordType ;
   LCurrProp: TRttiProperty;
   LObject: TObject;
-  LJsonObject: TJSONObject;
+  LJsonObject: TSuperTableString;
+  LEntry: TSuperAvlEntry;
 begin
   if Assigned(AType) then
   begin
-    LJsonObject := AJsonObject as TJSONObject;
+    LJsonObject := AJsonObject.AsObject;
     case AType.TypeKind of
       tkRecord:
       begin
         TValue.MakeWithoutCopy(nil, AType.Handle, Result);
         LRecordType := TSvRttiInfo.GetType(AType.Handle).AsRecord;
 
-        for i := 0 to LJsonObject.Size - 1 do
+        for LEntry in LJsonObject do
         begin
-          //search for property name
-          LField := FindRecordFieldName(LJsonObject.Get(i).JsonString.Value, LRecordType);
+          LField := FindRecordFieldName(LEntry.Name, LRecordType);
           if Assigned(LField) then
           begin
             {DONE -oLinas -cGeneral : fix arguments}
             LField.SetValue(Result.GetReferenceToRawData,
-              SetValue(LJsonObject.Get(i).JsonValue, AObj, nil, LField.FieldType, ASkip));
+              SetValue(LEntry.Value, AObj, nil, LField.FieldType, ASkip));
           end;
         end;
       end;
@@ -662,9 +597,9 @@ begin
             Result := TSvSerializer.CreateType(AType.Handle);
           end;
 
-          for i := 0 to LJsonObject.Size - 1 do
+          for LEntry in LJsonObject do
           begin
-            LCurrProp := AType.GetProperty(LJsonObject.Get(i).JsonString.Value);
+            LCurrProp := AType.GetProperty(LEntry.Name);
             if Assigned(LCurrProp) then
             begin
               if IsTransient(LCurrProp) then
@@ -672,7 +607,7 @@ begin
                 Continue;
               end;
 
-              LCurrProp.SetValue(GetRawPointer(Result), SetValue(LJsonObject.Get(i).JsonValue, Result {AObj}, LCurrProp,
+              LCurrProp.SetValue(GetRawPointer(Result), SetValue(LEntry.Value, Result {AObj}, LCurrProp,
                 LCurrProp.PropertyType, ASkip));
             end;
           end;
@@ -685,16 +620,17 @@ begin
           if Assigned(LObject) then
           begin
             Result := LObject;
-            for i := 0 to LJsonObject.Size - 1 do
+
+            for LEntry in LJsonObject do
             begin
-              LCurrProp := AType.GetProperty(LJsonObject.Get(i).JsonString.Value);
+              LCurrProp := AType.GetProperty(LEntry.Name);
               if Assigned(LCurrProp) then
               begin
                 if IsTransient(LCurrProp) then
                 begin
                   Continue;
                 end;
-                LCurrProp.SetValue(Result.AsObject, SetValue(LJsonObject.Get(i).JsonValue, Result, LCurrProp,
+                LCurrProp.SetValue(Result.AsObject, SetValue(LEntry.Value, Result, LCurrProp,
                   LCurrProp.PropertyType, ASkip));
               end;
             end;
@@ -709,7 +645,7 @@ begin
   end;
 end;
 
-function TSvJsonSerializer.DoSetFromString(AJsonString: TJSONValue; AType: TRttiType;
+function TSvSuperJsonSerializer.DoSetFromString(AJsonString: ISuperObject; AType: TRttiType;
   var ASkip: Boolean): TValue;
 var
   i: Integer;
@@ -720,21 +656,21 @@ begin
       tkEnumeration:
       begin
         Result := TValue.FromOrdinal(AType.Handle,
-          GetEnumValue(AType.Handle, AJsonString.Value));
+          GetEnumValue(AType.Handle, AJsonString.AsString));
       end;
       tkSet:
       begin
-        i := StringToSet(AType.Handle, AJsonString.Value);
+        i := StringToSet(AType.Handle, AJsonString.AsString);
         TValue.Make(@i, AType.Handle, Result);
       end;
       tkVariant:
       begin
-        Result := TValue.FromVariant(AJsonString.Value);
+        Result := TValue.FromVariant(AJsonString.AsString);
       end;
       tkUString, tkWString, tkLString, tkWChar, tkChar, tkString:
       begin
         //avoid skip
-        Result := AJsonString.Value;
+        Result := AJsonString.AsString;
       end
       else
       begin
@@ -746,40 +682,45 @@ begin
   end
   else
   begin
-    Result := AJsonString.Value;
+    Result := AJsonString.AsString;
   end;
 end;
 
-procedure TSvJsonSerializer.EndSerialization;
+procedure TSvSuperJsonSerializer.EndDeSerialization(AStream: TStream);
 begin
   inherited;
-  FMainObj.Free;
 end;
 
-function TSvJsonSerializer.GetValue(const AFrom: TValue; AProp: TRttiProperty): TJSONValue;
+procedure TSvSuperJsonSerializer.EndSerialization;
+begin
+  inherited;
+  FMainObj := nil;
+end;
+
+function TSvSuperJsonSerializer.GetValue(const AFrom: TValue; AProp: TRttiProperty): ISuperObject;
 begin
   if IsTransient(AProp) then
-    Exit(TJSONNull.Create);
+    Exit(SO(Null));
 
   if AFrom.IsEmpty then
-    Result := TJSONNull.Create
+    Result := SO(Null)
   else
   begin
     //Result := nil;
     case AFrom.Kind of
-      tkInteger: Result := TJSONNumber.Create(AFrom.AsInteger);
-      tkInt64: Result := TJSONNumber.Create(AFrom.AsInt64);
+      tkInteger: Result := SO(AFrom.AsInteger);
+      tkInt64: Result := SO(AFrom.AsInt64);
       tkEnumeration:
       begin
         Result := DoGetFromEnum(AFrom, AProp);
       end;
       tkSet:
       begin
-        Result := TSvJsonString.Create(AFrom.ToString);
+        Result := SOString(AFrom.ToString);
       end;
-      tkFloat: Result := TJSONNumber.Create(AFrom.AsExtended);
+      tkFloat: Result := SO(AFrom.AsExtended);
       tkString, tkWChar, tkLString, tkWString, tkChar, tkUString:
-        Result := TSvJsonString.Create(AFrom.AsString);
+        Result := SOString(AFrom.AsString);
       tkArray, tkDynArray:
       begin
         Result := DoGetFromArray(AFrom, AProp);
@@ -804,21 +745,46 @@ begin
       else
       begin
         PostError('Unsupported type: ' + AFrom.ToString);
-        Result := TSvJsonString.Create('Unsupported type: ' + AFrom.ToString);
+        Result := SOString('Unsupported type: ' + AFrom.ToString);
         //  raise ESvSerializeException.Create('Unsupported type: ' + AFrom.ToString);
       end;
     end;
   end;
 end;
 
-procedure TSvJsonSerializer.SerializeObject(const AKey: string; const obj: TValue;
-  AStream: TStream; ACustomProps: TStringDynArray);
+function TSvSuperJsonSerializer.GetValueAsVariant(AObject: ISuperObject): Variant;
+var
+  LInt64: Int64;
+  LInt: Integer;
+begin
+  Result := Null;
+  if Assigned(AObject) then
+  begin
+    case AObject.DataType of
+      stBoolean: Result := AObject.AsBoolean;
+      stDouble: Result := AObject.AsDouble ;
+      stCurrency: Result := AObject.AsCurrency ;
+      stInt:
+      begin
+        LInt64 := AObject.AsInteger;
+        if TryStrToInt(IntToStr(LInt64), LInt) then
+          Result := LInt
+        else
+          Result := LInt64;
+      end;
+
+      stObject, stArray, stString, stMethod: Result := AObject.AsString;
+    end;
+  end;
+end;
+
+procedure TSvSuperJsonSerializer.SerializeObject(const AKey: string; const obj: TValue; AStream: TStream;
+  ACustomProps: TStringDynArray);
 var
   LType: TRttiType;
   LProp: TRttiProperty;
   LValue: TValue;
-  LObject: TJSONObject;
-  LPair: TJSONPair;
+  LObject: ISuperObject;
   LPropName: string;
   I: Integer;
   LField: TRttiField;
@@ -828,7 +794,7 @@ begin
 
   if not obj.IsEmpty and (Assigned(AStream)) then
   begin
-    FStream := AStream;
+    Stream := AStream;
     LType := TSvRttiInfo.GetType(obj);
     //create main object
     if AKey = '' then
@@ -837,9 +803,8 @@ begin
     end
     else
     begin
-      LObject := TJSONObject.Create();
-      LPair := TJSONPair.Create(GetObjectUniqueName(AKey, obj), LObject);
-      FMainObj.AddPair(LPair);
+      LObject := SO();
+      FMainObj.O[GetObjectUniqueName(AKey, obj)] := LObject;
     end;
 
     if Length(ACustomProps) > 0 then
@@ -850,13 +815,9 @@ begin
         if Assigned(LProp) then
         begin
           LValue := TSvRttiInfo.GetValue(LProp, obj);
-
           LPropName := LProp.Name;
-                    
-          LPair := TJSONPair.Create(TSvJsonString.Create(LPropName), GetValue(LValue, LProp));
-
-          LObject.AddPair(LPair);
-        end;        
+          LObject.O[LPropName] := GetValue(LValue, LProp);
+        end;
       end;
     end
     else
@@ -867,10 +828,7 @@ begin
         begin
           LValue := LField.GetValue(obj.GetReferenceToRawData);
           LPropName := LField.Name;
-          LPair := TJSONPair.Create(TSvJsonString.Create(LPropName),
-            GetValue(LValue, TRttiProperty(LField)));
-
-          LObject.AddPair(LPair);
+          LObject.O[LPropName] := GetValue(LValue, TRttiProperty(LField));
         end;
       end
       else
@@ -893,18 +851,15 @@ begin
               LValue := LAttrib.GetData(LValue);
             end;
           end;
-
-          LPair := TJSONPair.Create(TSvJsonString.Create(LPropName),
-            GetValue(LValue, LProp));
-
-          LObject.AddPair(LPair);
+          LObject.O[LPropName] := GetValue(LValue, LProp);
         end;
       end;
     end;
   end;
 end;
 
-function TSvJsonSerializer.SetValue(const AFrom: TJSONValue; const AObj: TValue; AProp: TRttiProperty; AType: TRttiType; var Skip: Boolean): TValue;
+function TSvSuperJsonSerializer.SetValue(const AFrom: ISuperObject; const AObj: TValue; AProp: TRttiProperty;
+  AType: TRttiType; var Skip: Boolean): TValue;
 begin
   Skip := False;
 
@@ -916,127 +871,50 @@ begin
 
   if Assigned(AFrom) then
   begin
-    if AFrom is TJSONNumber then
+    if (AFrom.IsType(stInt)) or (AFrom.IsType(stDouble)) or (AFrom.IsType(stCurrency)) then
     begin
-      Result := DoSetFromNumber(TJSONNumber(AFrom));
+      Result := DoSetFromNumber(AFrom);
     end
-    else if AFrom is TJSONString then
+    else if AFrom.IsType(stString) then
     begin
-      Result := DoSetFromString(TJSONString(AFrom), AType, Skip);
+      Result := DoSetFromString(AFrom, AType, Skip);
     end
-    else if AFrom is TJSONTrue then
+    else if AFrom.IsType(stBoolean) then
     begin
-      Result := True;
+      Result := AFrom.AsBoolean;
     end
-    else if AFrom is TJSONFalse then
-    begin
-      Result := False;
-    end
-    else if AFrom is TJSONNull then
+    else if AFrom.IsType(stNull) then
     begin
       Result := TValue.Empty;
     end
-    else if AFrom is TJSONArray then
+    else if AFrom.IsType(stArray) then
     begin
-      Result := DoSetFromArray(TJSONArray(AFrom), AType, AObj, AProp, Skip);
+      Result := DoSetFromArray(AFrom, AType, AObj, AProp, Skip);
     end
-    else if AFrom is TJSONObject then
+    else if AFrom.IsType(stObject) then
     begin
-      Result := DoSetFromObject(TJSONObject(AFrom), AType, AObj, AProp, Skip);
+      Result := DoSetFromObject(AFrom, AType, AObj, AProp, Skip);
     end
     else
     begin
       Skip := True;
-      PostError('Unsupported value type: ' + AFrom.ToString);
+      PostError('Unsupported value type: ' + AFrom.AsString);
        // raise ESvSerializeException.Create('Unsupported value type: ' + AFrom.ClassName)
     end;
   end;
 end;
 
-function TSvJsonSerializer.ToString: string;
-begin
-  Result := FMainObj.ToString;
-end;
-
-{ TSvJsonString }
-
-constructor TSvJsonString.Create(const AValue: string);
-begin
-  {$IF CompilerVersion >= 23}
-  inherited Create(AValue);
-  {$ELSE}
-  inherited Create(EscapeValue(AValue));
-  {$IFEND}
-end;
-
-function TSvJsonString.EscapeValue(const AValue: string): string;
-
-  procedure AddChars(const AChars: string; var Dest: string; var AIndex: Integer); inline;
-  begin
-    System.Insert(AChars, Dest, AIndex);
-    System.Delete(Dest, AIndex + 2, 1);
-    Inc(AIndex, 2);
-  end;
-
-  procedure AddUnicodeChars(const AChars: string; var Dest: string; var AIndex: Integer); inline;
-  begin
-    System.Insert(AChars, Dest, AIndex);
-    System.Delete(Dest, AIndex + 6, 1);
-    Inc(AIndex, 6);
-  end;
-
+function TSvSuperJsonSerializer.SOString(const AValue: string): ISuperObject;
 var
-  i, ix: Integer;
-  LChar: Char;
+  LValue: Variant;
 begin
-  Result := AValue;
-  ix := 1;
-  for i := 1 to System.Length(AValue) do
-  begin
-    LChar :=  AValue[i];
-    case LChar of
-      '/', '\', '"':
-      begin
-        System.Insert('\', Result, ix);
-        Inc(ix, 2);
-      end;
-      #8:  //backspace \b
-      begin
-        AddChars('\b', Result, ix);
-      end;
-      #9:
-      begin
-        AddChars('\t', Result, ix);
-      end;
-      #10:
-      begin
-        AddChars('\n', Result, ix);
-      end;
-      #12:
-      begin
-        AddChars('\f', Result, ix);
-      end;
-      #13:
-      begin
-        AddChars('\r', Result, ix);
-      end;
-      #0 .. #7, #11, #14 .. #31:
-      begin
-        AddUnicodeChars('\u' + IntToHex(Word(LChar), 4), Result, ix);
-      end
-      else
-      begin
-        if Word(LChar) > 127 then
-        begin
-          AddUnicodeChars('\u' + IntToHex(Word(LChar), 4), Result, ix);
-        end
-        else
-        begin
-          Inc(ix);
-        end;
-      end;
-    end;
-  end;
+  LValue := AValue;
+  Result := SO(LValue);
+end;
+
+function TSvSuperJsonSerializer.ToString: string;
+begin
+  Result := FMainObj.AsJSon();
 end;
 
 end.

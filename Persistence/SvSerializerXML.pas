@@ -6,7 +6,7 @@ uses
   SvSerializer;
 
 type
-  TSvXMLSerializer = class(TSvAbstractSerializer)
+  TSvXMLSerializer = class(TSvAbstractSerializer<TObject>)
 
   end;
 
