@@ -672,7 +672,7 @@ begin
   strInput:= TStringStream.Create(FValue);
   strOutput:= TStringStream.Create;
   try
-    Zipper:= TZCompressionStream.Create(strOutput, TZCompressionLevel(ACompressionLevel) {$IF CompilerVersion > 22} , 128 {$ENDIF});
+    Zipper:= TZCompressionStream.Create(strOutput, TZCompressionLevel(ACompressionLevel) {$IF CompilerVersion > 22} , 128 {$IFEND});
     try
       Zipper.CopyFrom(strInput, strInput.Size);
     finally

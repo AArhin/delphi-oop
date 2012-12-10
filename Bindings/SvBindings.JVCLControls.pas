@@ -6,7 +6,7 @@
 {                                                       }
 {*******************************************************}
 
-unit SvBindings.VCLControls;
+unit SvBindings.JVCLControls;
 
 interface
 
