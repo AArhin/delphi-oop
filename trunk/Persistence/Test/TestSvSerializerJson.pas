@@ -258,7 +258,6 @@ type
 
   TestTSvJsonSerializerFactory = class(TTestCase)
   strict private
-    FILE_SERIALIZE: string;
     FSerializer: TSvSerializer;
     FSvJsonSerializerFactory: ISerializer;
     FSerializerType: TSvSerializeFormat;
@@ -267,6 +266,7 @@ type
     procedure TearDown; override;
     property SerializerType: TSvSerializeFormat read FSerializerType write FSerializerType;
   protected
+    FILE_SERIALIZE: string;
     procedure TestEscapeValue();
   published
     //test methods
@@ -284,6 +284,12 @@ type
   end;
 
   TestTSvSuperJsonSerializer = class(TestTSvJsonSerializerFactory)
+  public
+    procedure SetUp; override;
+    procedure TearDown; override;
+  end;
+
+  TestTSvNativeXMLSerializer = class(TestTSvJsonSerializerFactory)
   public
     procedure SetUp; override;
     procedure TearDown; override;
@@ -1202,9 +1208,24 @@ begin
   inherited;
 end;
 
+{ TestTSvNativeXMLSerializer }
+
+procedure TestTSvNativeXMLSerializer.SetUp;
+begin
+  SerializerType := sstNativeXML;
+  inherited;
+  FILE_SERIALIZE := 'TestNativeXMLSerialize.xml';
+end;
+
+procedure TestTSvNativeXMLSerializer.TearDown;
+begin
+  inherited;
+end;
+
 initialization
   // Register any test cases with the test runner
   RegisterTest(TestTSvJsonSerializerFactory.Suite);
   RegisterTest(TestTSvSuperJsonSerializer.Suite);
+  RegisterTest(TestTSvNativeXMLSerializer.Suite);
 end.
 

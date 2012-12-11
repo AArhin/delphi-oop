@@ -67,7 +67,7 @@ type
 
   ESvSerializeException = class(Exception);
 
-  TSvSerializeFormat = (sstJson = 0, sstXML, sstSuperJson);
+  TSvSerializeFormat = (sstJson = 0, sstSuperJson, sstNativeXML);
 
   TSvRttiInfo = class
   strict private
@@ -342,7 +342,8 @@ uses
   DB,
   SvSerializerJson,
   SvSerializerSuperJson,
-  SvSerializerXML;
+  SvSerializerNativeXML
+  ;
 
 { SvSerialize }
 
@@ -445,9 +446,7 @@ begin
   case FSerializeFormat of
     sstJson: Result := TSvJsonSerializer.Create(Self);
     sstSuperJson: Result := TSvSuperJsonSerializer.Create(Self);
-    {$WARNINGS OFF}
-    sstXML: Result := TSvXMLSerializer.Create(Self);
-    {$WARNINGS ON}
+    sstNativeXML: Result := TSvNativeXMLSerializer.Create(Self);
   end;
 end;
 
