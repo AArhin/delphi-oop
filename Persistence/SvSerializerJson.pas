@@ -11,7 +11,7 @@ unit SvSerializerJson;
 interface
 
 uses
-  Classes, SvSerializer, SysUtils, DBXJSON, Rtti, Types;
+  Classes, SvSerializer, SysUtils, DBXJSON, Rtti;
 
 type
   TSvJsonString = class(TJSONString)
@@ -69,12 +69,6 @@ type
 
 implementation
 
-uses
-  TypInfo,
-  Variants,
-  StrUtils,
-  DB;
-
 const
   CT_QUALIFIEDNAME = 'QualifiedName';
   CT_DATASET_RECORDS = 'rows';
@@ -108,10 +102,10 @@ begin
 
         if Assigned(LJsonVal) and (LJsonVal is TJSONObject) then
         begin
-          RootObject := TJSONObject(LJsonVal);
+          RootObject := LJsonVal;
         end;
       end;
-      
+
     finally
       LBytes.Free;
     end;

@@ -10,7 +10,7 @@ unit SvSerializerSuperJson;
 interface
 
 uses
-  Classes, SvSerializer, SysUtils, superobject, Rtti, Types;
+  Classes, SvSerializer, SysUtils, superobject, Rtti;
 
 type
   TSvSuperJsonSerializer = class(TSvAbstractSerializer<ISuperObject>)
@@ -64,10 +64,8 @@ type
 implementation
 
 uses
-  TypInfo,
-  Variants,
-  StrUtils,
-  DB;
+  Variants
+  ;
 
 { TSvSuperJsonSerializer }
 
