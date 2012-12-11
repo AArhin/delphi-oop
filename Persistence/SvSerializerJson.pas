@@ -187,7 +187,8 @@ end;
 procedure TSvJsonSerializer.EndSerialization;
 begin
   inherited;
-  RootObject.Free;
+  if Assigned(RootObject) then
+    RootObject.Free;
 end;
 
 function TSvJsonSerializer.EnumerateObject(AObject: TJSONValue): TArray<TEnumEntry<TJSONValue>>;
