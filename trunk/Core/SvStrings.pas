@@ -11,7 +11,7 @@ unit SvStrings;
 interface
 
 uses
-  SysUtils, Generics.Collections, Classes;
+  SysUtils, Generics.Collections, Classes, StrUtils;
 
 type
   {$WARNINGS OFF}
@@ -455,7 +455,6 @@ type
 implementation
 
 uses
-  StrUtils,
   Character,
   //MessageDigest_5,
   IdGlobal,
