@@ -16,7 +16,9 @@ uses
 type
   TSvJsonString = class(TJSONString)
   private
+    {$IF CompilerVersion < 23}
     function EscapeValue(const AValue: string): string;
+    {$IFEND}
   public
     constructor Create(const AValue: string); overload;
   end;
@@ -300,6 +302,7 @@ begin
   {$IFEND}
 end;
 
+{$IF CompilerVersion < 23}
 function TSvJsonString.EscapeValue(const AValue: string): string;
 
   procedure AddChars(const AChars: string; var Dest: string; var AIndex: Integer); inline;
@@ -369,5 +372,7 @@ begin
     end;
   end;
 end;
+{$IFEND}
+
 
 end.

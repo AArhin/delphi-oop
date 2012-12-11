@@ -92,4 +92,11 @@
   {$define D15UP}
 {$endif}
 
+// Delphi XE3 / 17
+{$ifdef VER240}
+  {$define D7UP}
+  {$define D10UP}
+  {$define D15UP}
+{$endif}
+
 
