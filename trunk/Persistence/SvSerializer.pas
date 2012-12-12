@@ -48,15 +48,8 @@ type
   SvSerialize = class(TCustomAttribute)
   private
     FName: string;
-    FGetData : TFunc<TValue, TValue>;
-    FSetData : TProc<TValue>;
   public
     constructor Create(const AName: string = ''); overload;
-    constructor Create(const AName: string; aGetData : TFunc<TValue, TValue>;
-      aSetData : TProc<TValue>); overload; //not implemented yet
-
-    property GetData : TFunc<TValue, TValue> read FGetData write FGetData;
-    property SetData : TProc<TValue> read FSetData write FSetData;
     property Name: string read FName;
   end;
 
@@ -158,7 +151,6 @@ type
     procedure BeginDeSerialization(AStream: TStream); override;
     procedure EndDeSerialization(AStream: TStream); override;
 
- //   function ToString(): string; reintroduce; virtual; abstract;
     function FindRecordFieldName(const AFieldName: string; ARecord: TRttiRecordType): TRttiField; virtual;
 
     procedure SerializeObject(const AKey: string; const obj: TValue; AStream: TStream;
@@ -357,8 +349,12 @@ type
 
   TSvObjectHelper = class helper for TObject
   public
+    function ToSerializedString(ASerializerFormat: TSvSerializeFormat): string;
     function ToJsonString(): string;
+    function ToXmlString(): string;
+    procedure FromSerializedString(const AValue: string; ASerializerFormat: TSvSerializeFormat);
     constructor FromJsonString(const AJsonString: string);
+    constructor FromXmlString(const AXmlString: string);
   end;
 
   TSerializerFactory = class sealed
@@ -386,16 +382,8 @@ uses
 
 constructor SvSerialize.Create(const  AName: string);
 begin
-  Create(AName, nil, nil);
-end;
-
-constructor SvSerialize.Create(const AName: string; aGetData: TFunc<TValue, TValue>;
-  aSetData: TProc<TValue>);
-begin
   inherited Create();
   FName := AName;
-  FGetData := aGetData;
-  FSetData := aSetData;
 end;
 
 { TSvBaseSerializer }
@@ -1680,11 +1668,6 @@ begin
           begin
             if (LAttrib.Name <> '') then
               LPropName := LAttrib.Name;
-
-            if Assigned(LAttrib.GetData) then
-            begin
-              LValue := LAttrib.GetData(LValue);
-            end;
           end;
 
           ObjectAdd(LObject, LPropName, GetValue(LValue, LProp));
@@ -1846,30 +1829,51 @@ end;
 { TSvObjectHelper }
 
 constructor TSvObjectHelper.FromJsonString(const AJsonString: string);
+begin
+  inherited Create();
+  FromSerializedString(AJsonString, sstSuperJson);
+end;
+
+procedure TSvObjectHelper.FromSerializedString(const AValue: string; ASerializerFormat: TSvSerializeFormat);
 var
   LSerializer: TSvSerializer;
 begin
-  inherited Create();
-  LSerializer := TSvSerializer.Create(sstJson);
+  LSerializer := TSvSerializer.Create(ASerializerFormat);
   try
     LSerializer.AddObject('', Self);
-    LSerializer.DeSerialize(AJsonString, TEncoding.UTF8);
+    LSerializer.DeSerialize(AValue, TEncoding.UTF8);
   finally
     LSerializer.Free;
   end;
 end;
 
+constructor TSvObjectHelper.FromXmlString(const AXmlString: string);
+begin
+  inherited Create();
+  FromSerializedString(AXmlString, sstNativeXML);
+end;
+
 function TSvObjectHelper.ToJsonString: string;
+begin
+  Result := ToSerializedString(sstSuperJson);
+end;
+
+function TSvObjectHelper.ToSerializedString(ASerializerFormat: TSvSerializeFormat): string;
 var
   LSerializer: TSvSerializer;
 begin
-  LSerializer := TSvSerializer.Create(sstJson);
+  LSerializer := TSvSerializer.Create(ASerializerFormat);
   try
     LSerializer.AddObject('', Self);
     LSerializer.Serialize(Result, TEncoding.UTF8);
   finally
     LSerializer.Free;
   end;
+end;
+
+function TSvObjectHelper.ToXmlString: string;
+begin
+  Result := ToSerializedString(sstNativeXML);
 end;
 
 { TSerializerFactory }

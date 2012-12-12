@@ -581,7 +581,7 @@ var
   LBean: THelperTest;
   LJson: string;
 const
-  HELPER_JSON = '{"Foo":"Bar"}';
+  HELPER_JSON = '{' + #13#10 + ' "Foo": "Bar"'+ #13#10 + '}';
 begin
   LBean := THelperTest.Create;
   try

@@ -300,7 +300,7 @@ end;
 
 function TSvSuperJsonSerializer.ToString: string;
 begin
-  Result := RootObject.AsJSon();
+  Result := RootObject.AsJSon(True, True);
 end;
 
 initialization
