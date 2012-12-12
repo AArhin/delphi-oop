@@ -116,7 +116,33 @@ type
     Value: T;
   end;
 
-  TSvAbstractSerializer<T> = class(TInterfacedObject, ISerializer)
+  TSvAbstractNonGenericSerializer = class(TInterfacedObject, ISerializer)
+  protected
+    procedure BeginSerialization(); virtual; abstract;
+    procedure EndSerialization(); virtual; abstract;
+    procedure BeginDeSerialization(AStream: TStream); virtual; abstract;
+    procedure EndDeSerialization(AStream: TStream);virtual; abstract;
+
+    function ToString(): string; reintroduce; virtual; abstract;
+
+    procedure SerializeObject(const AKey: string; const obj: TValue; AStream: TStream;
+      ACustomProps: TStringDynArray); virtual; abstract;
+    procedure DeSerializeObject(const AKey: string; obj: TValue; AStream: TStream;
+      ACustomProps: TStringDynArray); virtual; abstract;
+    function GetObjectUniqueName(const AKey: string; obj: TObject): string; overload; virtual; abstract;
+    function GetObjectUniqueName(const AKey: string; obj: TValue): string; overload; virtual; abstract;
+    procedure PostError(const ErrorText: string); virtual; abstract;
+    function IsTypeEnumerable(ARttiType: TRttiType; out AEnumMethod: TRttiMethod): Boolean; virtual; abstract;
+    function IsTransient(AProp: TRttiProperty): Boolean; virtual; abstract;
+    function GetRawPointer(const AValue: TValue): Pointer; virtual; abstract;
+    procedure ClearErrors(); virtual; abstract;
+  public
+    constructor Create(AOwner: TSvSerializer); virtual;
+  end;
+
+  TSvAbstractNonGenericSerializerClass = class of TSvAbstractNonGenericSerializer;
+
+  TSvAbstractSerializer<T> = class(TSvAbstractNonGenericSerializer)
   private
     FOwner: TSvSerializer;
     FErrors: TList<string>;
@@ -127,24 +153,24 @@ type
     function GetMainObj: T;
     procedure SetMainObj(const Value: T);
   protected
-    procedure BeginSerialization(); virtual;
-    procedure EndSerialization(); virtual;
-    procedure BeginDeSerialization(AStream: TStream); virtual;
-    procedure EndDeSerialization(AStream: TStream); virtual;
+    procedure BeginSerialization(); override;
+    procedure EndSerialization(); override;
+    procedure BeginDeSerialization(AStream: TStream); override;
+    procedure EndDeSerialization(AStream: TStream); override;
 
-    function ToString(): string; reintroduce; virtual; abstract;
+ //   function ToString(): string; reintroduce; virtual; abstract;
     function FindRecordFieldName(const AFieldName: string; ARecord: TRttiRecordType): TRttiField; virtual;
 
     procedure SerializeObject(const AKey: string; const obj: TValue; AStream: TStream;
-      ACustomProps: TStringDynArray); virtual;
+      ACustomProps: TStringDynArray); override;
     procedure DeSerializeObject(const AKey: string; obj: TValue; AStream: TStream;
-      ACustomProps: TStringDynArray); virtual;
-    function GetObjectUniqueName(const AKey: string; obj: TObject): string; overload; virtual;
-    function GetObjectUniqueName(const AKey: string; obj: TValue): string; overload; virtual;
-    procedure PostError(const ErrorText: string); virtual;
-    function IsTypeEnumerable(ARttiType: TRttiType; out AEnumMethod: TRttiMethod): Boolean; virtual;
-    function IsTransient(AProp: TRttiProperty): Boolean;
-    function GetRawPointer(const AValue: TValue): Pointer;
+      ACustomProps: TStringDynArray); override;
+    function GetObjectUniqueName(const AKey: string; obj: TObject): string; overload; override;
+    function GetObjectUniqueName(const AKey: string; obj: TValue): string; overload; override;
+    procedure PostError(const ErrorText: string); override;
+    function IsTypeEnumerable(ARttiType: TRttiType; out AEnumMethod: TRttiMethod): Boolean; override;
+    function IsTransient(AProp: TRttiProperty): Boolean; override;
+    function GetRawPointer(const AValue: TValue): Pointer; override;
     
     function DoSetFromNumber(AJsonNumber: T): TValue; virtual;
     function DoSetFromString(AJsonString: T; AType: TRttiType; var ASkip: Boolean): TValue; virtual;
@@ -197,10 +223,10 @@ type
   public
     FFormatSettings, FOldFormatSettings: TFormatSettings;
 
-    constructor Create(AOwner: TSvSerializer); virtual;
+    constructor Create(AOwner: TSvSerializer); override;
     destructor Destroy; override;
 
-    procedure ClearErrors();
+    procedure ClearErrors(); override;
 
     property Errors: TList<string> read FErrors;
     property Owner: TSvSerializer read FOwner;
@@ -335,14 +361,25 @@ type
     constructor FromJsonString(const AJsonString: string);
   end;
 
+  TSerializerFactory = class sealed
+  private
+    class var
+      FRegisteredSerializers: TDictionary<TSvSerializeFormat,TSvAbstractNonGenericSerializerClass>;
+  private
+    class constructor Create;
+    class destructor Destroy;
+  public
+    class function GetInstance(AOwner: TSvSerializer; ASerializerFormat: TSvSerializeFormat): ISerializer;
+    class procedure RegisterSerializer(ASerializerFormat: TSvSerializeFormat; AClass: TSvAbstractNonGenericSerializerClass);
+  end;
+
+  ESerializerFactoryException = class(Exception);
+
 implementation
 
 uses
-  Variants,
-  DB,
-  SvSerializerJson,
-  SvSerializerSuperJson,
-  SvSerializerNativeXML
+  Variants
+ ,DB
   ;
 
 { SvSerialize }
@@ -443,11 +480,7 @@ end;
 
 function TSvSerializer.CreateConcreateSerializer(): ISerializer;
 begin
-  case FSerializeFormat of
-    sstJson: Result := TSvJsonSerializer.Create(Self);
-    sstSuperJson: Result := TSvSuperJsonSerializer.Create(Self);
-    sstNativeXML: Result := TSvNativeXMLSerializer.Create(Self);
-  end;
+  Result := TSerializerFactory.GetInstance(Self, FSerializeFormat);
 end;
 
 class function TSvSerializer.CreateType(ATypeInfo: PTypeInfo): TObject;
@@ -834,7 +867,7 @@ end;
 
 constructor TSvAbstractSerializer<T>.Create(AOwner: TSvSerializer);
 begin
-  inherited Create();
+  inherited Create(AOwner);
   FOwner := AOwner;
   FErrors := TList<string>.Create;
   FFormatSettings := TFormatSettings.Create;
@@ -1837,6 +1870,43 @@ begin
   finally
     LSerializer.Free;
   end;
+end;
+
+{ TSerializerFactory }
+
+class constructor TSerializerFactory.Create;
+begin
+  FRegisteredSerializers := TDictionary<TSvSerializeFormat,TSvAbstractNonGenericSerializerClass>.Create();
+end;
+
+class destructor TSerializerFactory.Destroy;
+begin
+  FRegisteredSerializers.Free;
+end;
+
+class function TSerializerFactory.GetInstance(AOwner: TSvSerializer;
+  ASerializerFormat: TSvSerializeFormat): ISerializer;
+var
+  LSerializerClass: TSvAbstractNonGenericSerializerClass;
+begin
+  if not FRegisteredSerializers.TryGetValue(ASerializerFormat, LSerializerClass) then
+    raise ESerializerFactoryException.CreateFmt('Serializer not registered: "%S".',
+      [GetEnumName(TypeInfo(TSvSerializeFormat), Ord(ASerializerFormat))]);
+
+  Result := LSerializerClass.Create(AOwner);
+end;
+
+class procedure TSerializerFactory.RegisterSerializer(ASerializerFormat: TSvSerializeFormat;
+  AClass: TSvAbstractNonGenericSerializerClass);
+begin
+  FRegisteredSerializers.AddOrSetValue(ASerializerFormat, AClass);
+end;
+
+{ TSvAbstractNonGenericSerializer }
+
+constructor TSvAbstractNonGenericSerializer.Create(AOwner: TSvSerializer);
+begin
+  inherited Create();
 end;
 
 end.
