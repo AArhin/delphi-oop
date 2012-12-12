@@ -303,4 +303,7 @@ begin
   Result := RootObject.AsJSon();
 end;
 
+initialization
+  TSerializerFactory.RegisterSerializer(sstSuperJson, TSvSuperJsonSerializer);
+
 end.

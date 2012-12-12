@@ -393,5 +393,8 @@ begin
 end;
 {$IFEND}
 
+initialization
+  TSerializerFactory.RegisterSerializer(sstJson, TSvJsonSerializer);
+
 
 end.

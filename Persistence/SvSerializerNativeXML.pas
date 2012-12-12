@@ -285,4 +285,7 @@ begin
   Result := FXML.WriteToString();
 end;
 
+initialization
+  TSerializerFactory.RegisterSerializer(sstNativeXML, TSvNativeXMLSerializer);
+
 end.
