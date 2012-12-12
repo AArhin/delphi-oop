@@ -116,9 +116,8 @@ constructor TSvNativeXMLSerializer.Create(AOwner: TSvSerializer);
 begin
   inherited Create(AOwner);
   RootObject := nil;
-  FXML := TNativeXML.CreateEx(nil, True, False, True, '');
+  FXML := TNativeXML.CreateEx(nil, True, False, True, 'root');
   FXML.XmlFormat := xfReadable;
-  FXML.FloatAllowScientific := True;
 end;
 
 function TSvNativeXMLSerializer.CreateArray: TXMLNode;
@@ -183,13 +182,11 @@ end;
 procedure TSvNativeXMLSerializer.EndDeSerialization(AStream: TStream);
 begin
   inherited;
-
 end;
 
 procedure TSvNativeXMLSerializer.EndSerialization;
 begin
   inherited;
-
 end;
 
 function TSvNativeXMLSerializer.EnumerateObject(AObject: TXMLNode): TArray<TEnumEntry<TXMLNode>>;
