@@ -1,0 +1,52 @@
+#summary SvSerializer
+#labels Phase-Implementation
+
+= First steps =
+
+ * Suppose you have declared your PODO (Plain Old Delphi Object):
+
+{{{
+type
+  TFoobar = class
+  private
+    FFoo: string;
+    FBar: string;
+  public
+    property Foo: string read FFoo write FFoo;
+    property Bar: string read FBar write FBar;
+    [SvTransient]
+    property Skip: Boolean read FSkip write FSkip;
+  end;
+}}}
+
+ * You can serialize the objects of this class using class helper methods:
+
+{{{
+uses
+  SvSerializer;
+...
+var
+  LFoobar: TFoobar;
+  LJsonString, LXMLString: string;
+begin
+  LFoobar := TFoobar.Create;
+  try
+    LFoobar.Foo := 'Foo';
+    LFoobar.Bar := 'Bar';
+    LFoobar.Skip := True;
+    //serialize to json
+    LJsonString := LFoobar.ToJsonString;
+    //serialize to xml
+    LXMLString := LFoobar.ToXmlString;
+  finally
+    LFoobar.Free;
+  end;
+end;
+
+}}}
+
+= Additional information=
+
+ * You need to register serializers in order to use them. You can do this by adding their units to your project.
+ * Serializer saves only _properties_ which are not marked with {{{[SvTransient]}}} attribute. You can add {{{[SvSerialize('PropertyName')]}}} attribute if you want to set property name for serialization.
+ * Supported types: all basic types, TObject descendants with no argument constructors, Enumerable types ({{{TList, TObjectList, TArray, TList<T>, TDictionary<T>}}} etc.), Records, TDataset descendants, Enumerators, Sets, etc. 
