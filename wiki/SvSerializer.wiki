@@ -1,4 +1,4 @@
-#summary SvSerializer guide
+#summary First steps with SvSerializer
 #labels Phase-Implementation
 
 = First steps =
@@ -45,8 +45,28 @@ end;
 
 }}}
 
+ * Deserialization is also very simple:
+
+{{{
+uses
+  SvSerializer;
+...
+var
+  LFoobar: TFoobar;
+  LJsonString: string;
+begin
+  LJsonString := '{"Foo": "Foo", "Bar": "Bar"}';  
+  LFoobar := TFoobar.FromJsonString(LJsonString);
+  try
+    CheckEqualsString('Foo', LFooBar.Foo);
+  finally
+    LFoobar.Free;
+  end;
+end;
+}}}
+
 = Additional information=
 
- * You need to register serializers in order to use them. You can do this by adding their units to your project.
+ * You need to register serializers in order to use them. You can do this by adding their units to your project (e.g. {{{ uses SvSerializerSuperJson, SvSerializerNativeXML, SvSerializerJson}}}).
  * Serializer saves only _properties_ which are not marked with {{{[SvTransient]}}} attribute. You can add {{{[SvSerialize('PropertyName')]}}} attribute if you want to set property name for serialization.
  * Supported types: all basic types, TObject descendants with no argument constructors, Enumerable types ({{{TList, TObjectList, TArray, TList<T>, TDictionary<T>}}} etc.), Records, TDataset descendants, Enumerators, Sets, etc. 
