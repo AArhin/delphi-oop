@@ -65,6 +65,30 @@ begin
 end;
 }}}
 
+ * Deserializing types which do not have non argument constructors:
+
+{{{
+type
+  TComplexConstructor = class
+  private
+    FName: string;
+    FValue: string;
+  public
+    constructor Create(const AName: string; AValue: string);
+
+    property Name: string read FName write FName;
+    property Value: string read FValue write FValue;
+  end;
+
+// we need to register our constructor for such a type 
+  TSvRttiInfo.RegisterConstructor(TypeInfo(TComplexConstructor)
+    , function: TObject
+    begin
+      Result := TComplexConstructor.Create('', '');
+    end);
+//from now on TSvSerializer will be able to create this type of object during deserialization
+}}}
+
 = Additional information=
 
  * You need to register serializers in order to use them. You can do this by adding their units to your project (e.g. {{{ uses SvSerializerSuperJson, SvSerializerNativeXML, SvSerializerJson}}}).
