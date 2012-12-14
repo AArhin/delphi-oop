@@ -22,6 +22,38 @@ type
     constructor Create; reintroduce; overload;
   end;
 
+  TComplexConstructor = class
+  private
+    FName: string;
+    FValue: string;
+  public
+    constructor Create(const AName: string; AValue: string);
+
+    property Name: string read FName write FName;
+    property Value: string read FValue write FValue;
+  end;
+
+  TName = class
+  private
+    FName: string;
+  public
+    constructor Create; overload;
+    constructor Create(const AName: string); overload;
+
+    property Name: string read FName write FName;
+  end;
+
+  TRegisterConstructor = class
+  private
+    FItems: TObjectList<TName>;
+    FComplex: TComplexConstructor;
+  public
+    destructor Destroy; override;
+
+    property Complex: TComplexConstructor read FComplex write FComplex;
+    property Items: TObjectList<TName> read FItems write FItems;
+  end;
+
   TDemoEnum = (deOne, deTwo, deThree);
 
   TNumbers = set of TDemoEnum;
@@ -281,6 +313,7 @@ type
     procedure TestSimpleArrayTValue();
     procedure TestOwnedObjects();
     procedure TestHelper();
+    procedure TestRegisteredConstructor();
   end;
 
   TestTSvSuperJsonSerializer = class(TestTSvJsonSerializerFactory)
@@ -669,6 +702,45 @@ begin
     CheckEquals(2, LBean.BeanSuper.Bean.Dummies.Count);
     CheckEqualsString('Foo', LBean.BeanSuper.Bean.Dummies[0].Dummy);
     CheckEqualsString('Bar', LBean.BeanSuper.Bean.Dummies[1].Dummy);
+  finally
+    LBean.Free;
+  end;
+end;
+
+procedure TestTSvJsonSerializerFactory.TestRegisteredConstructor;
+var
+  LBean: TRegisterConstructor;
+  LJson: string;
+begin
+  TSvRttiInfo.RegisterConstructor(TypeInfo(TObjectList<TName>)
+    , function: TObject
+    begin
+      Result := TObjectList<TName>.Create(True);
+    end);
+
+  TSvRttiInfo.RegisterConstructor(TypeInfo(TComplexConstructor)
+    , function: TObject
+    begin
+      Result := TComplexConstructor.Create('', '');
+    end);
+
+  LBean := TRegisterConstructor.Create;
+  try
+    LBean.Items := TObjectList<TName>.Create(True);
+    LBean.Items.Add(TName.Create('Bob'));
+    LBean.Items.Add(TName.Create('John'));
+
+    LBean.Complex := TComplexConstructor.Create('Bob', 'John');
+
+    LJson := LBean.ToJsonString;
+    CheckTrue(LJson <> '');
+    LBean.Free;
+
+    LBean := TRegisterConstructor.FromJsonString(LJson);
+    CheckEqualsString('Bob', LBean.Items[0].Name);
+    CheckEqualsString('John', LBean.Items[1].Name);
+    CheckEqualsString('Bob', LBean.Complex.Name);
+    CheckEqualsString('John', LBean.Complex.Value);
   finally
     LBean.Free;
   end;
@@ -1220,6 +1292,37 @@ end;
 procedure TestTSvNativeXMLSerializer.TearDown;
 begin
   inherited;
+end;
+
+{ TName }
+
+constructor TName.Create;
+begin
+  inherited Create;
+end;
+
+constructor TName.Create(const AName: string);
+begin
+  Create;
+  FName := AName;
+end;
+
+{ TRegisterConstructor }
+
+destructor TRegisterConstructor.Destroy;
+begin
+  FItems.Free;
+  FComplex.Free;
+  inherited Destroy;
+end;
+
+{ TComplexConstructor }
+
+constructor TComplexConstructor.Create(const AName: string; AValue: string);
+begin
+  inherited Create();
+  FName := AName;
+  FValue := AValue;
 end;
 
 initialization
