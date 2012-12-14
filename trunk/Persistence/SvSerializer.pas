@@ -62,10 +62,14 @@ type
 
   TSvSerializeFormat = (sstJson = 0, sstSuperJson, sstNativeXML);
 
+  TConstructorMethod = reference to function(): TObject;
+
   TSvRttiInfo = class
   strict private
     class var
       FCtx: TRttiContext;
+    class var
+      FRegisteredConstructors: TDictionary<PTypeInfo,TConstructorMethod>;
     class constructor Create;
     class destructor Destroy;
   public
@@ -80,6 +84,10 @@ type
     class procedure SetValue(AProp: TRttiProperty; const AInstance, AValue: TValue); overload;
     class procedure SetValue(AField: TRttiField; const AInstance, AValue: TValue); overload;
     class function GetValue(AProp: TRttiProperty; const AInstance: TValue): TValue;
+
+    class function CreateType(ATypeInfo: PTypeInfo): TObject; overload;
+
+    class procedure RegisterConstructor(ATypeInfo: PTypeInfo; AMethod: TConstructorMethod);
   end;
 
   ISerializer = interface
@@ -142,9 +150,9 @@ type
     FStringStream: TStringStream;
     FStream: TStream;
     FOldNullStrConvert: Boolean;
-    FMainObj: T;
-    function GetMainObj: T;
-    procedure SetMainObj(const Value: T);
+    FRootObj: T;
+    function GetRootObj: T;
+    procedure SetRootObj(const Value: T);
   protected
     procedure BeginSerialization(); override;
     procedure EndSerialization(); override;
@@ -211,7 +219,7 @@ type
     procedure ObjectAdd(AObject: T; const AName: string; const AValue: T); virtual; abstract;
 
 
-    property RootObject: T read GetMainObj write SetMainObj;
+    property RootObject: T read GetRootObj write SetRootObj;
   public
     FFormatSettings, FOldFormatSettings: TFormatSettings;
 
@@ -340,9 +348,6 @@ type
     function GetErrors(): TArray<string>;
     function GetErrorsAsString(): string;
 
-    class function CreateType<T: class>: T; overload;
-    class function CreateType(ATypeInfo: PTypeInfo): TObject; overload;
-
     property ErrorCount: Integer read GetErrorCount;
     property SerializeFormat: TSvSerializeFormat read FSerializeFormat write SetSerializeFormat;
   end;
@@ -469,50 +474,6 @@ end;
 function TSvSerializer.CreateConcreateSerializer(): ISerializer;
 begin
   Result := TSerializerFactory.GetInstance(Self, FSerializeFormat);
-end;
-
-class function TSvSerializer.CreateType(ATypeInfo: PTypeInfo): TObject;
-var
-  LType: TRttiType;
-  LMethCreate: TRttiMethod;
-  LInstanceType: TRttiInstanceType;
-begin
-  LType := TSvRttiInfo.GetType(ATypeInfo);        
-  for LMethCreate in LType.GetMethods do
-  begin
-    if (LMethCreate.IsConstructor) and (Length(LMethCreate.GetParameters) = 0) then
-    begin
-      LInstanceType := LType.AsInstance;
-
-      Result := LMethCreate.Invoke(LInstanceType.MetaclassType, []).AsObject;
-      Exit;
-    end;
-  end;  
-  Result := nil;
-end;
-
-class function TSvSerializer.CreateType<T>: T;
-var
-  LValue: TValue;
-  LType: TRttiType;
-  LMethCreate: TRttiMethod;
-  LInstanceType: TRttiInstanceType;
-begin
-  LType := TSvRttiInfo.GetType(TypeInfo(T));
-
-  for LMethCreate in LType.GetMethods do
-  begin
-    if (LMethCreate.IsConstructor) and (Length(LMethCreate.GetParameters) = 0) then
-    begin
-      LInstanceType := LType.AsInstance;
-
-      LValue := LMethCreate.Invoke(LInstanceType.MetaclassType, []);
-
-      Result := LValue.AsType<T>;
-
-      Exit;
-    end;
-  end;
 end;
 
 procedure TSvSerializer.DeSerialize(const AFromFilename: string);
@@ -1215,7 +1176,7 @@ begin
             //if AProp not assigned then we must create it
             if AType.IsInstance then
             begin
-              LObject := TSvSerializer.CreateType(AType.Handle);
+              LObject := TSvRttiInfo.CreateType(AType.Handle);
               if Assigned(LObject) then
               begin
                 LValue := LObject;
@@ -1233,7 +1194,7 @@ begin
 
             if LValue.AsObject = nil then
             begin
-              LValue := TSvSerializer.CreateType(AProp.PropertyType.Handle);
+              LValue := TSvRttiInfo.CreateType(AProp.PropertyType.Handle);
               bCreated := True;
             end;
 
@@ -1373,7 +1334,7 @@ begin
           Result := TSvRttiInfo.GetValue(AProp, AObj);
           if (Result.IsObject) and (Result.AsObject = nil) then
           begin
-            Result := TSvSerializer.CreateType(AType.Handle);
+            Result := TSvRttiInfo.CreateType(AType.Handle);
           end;
 
           LEnumerator := EnumerateObject(LJsonObject);           
@@ -1395,7 +1356,7 @@ begin
         else
         begin
           {DONE -oLinas -cGeneral : create new class and set all props}
-          LObject := TSvSerializer.CreateType(AType.Handle);
+          LObject := TSvRttiInfo.CreateType(AType.Handle);
           if Assigned(LObject) then
           begin
             Result := LObject;
@@ -1493,9 +1454,9 @@ begin
   Result := nil;
 end;
 
-function TSvAbstractSerializer<T>.GetMainObj: T;
+function TSvAbstractSerializer<T>.GetRootObj: T;
 begin
-  Result := FMainObj;
+  Result := FRootObj;
 end;
 
 function TSvAbstractSerializer<T>.GetObjectUniqueName(const AKey: string; obj: TValue): string;
@@ -1677,9 +1638,9 @@ begin
   end;
 end;
 
-procedure TSvAbstractSerializer<T>.SetMainObj(const Value: T);
+procedure TSvAbstractSerializer<T>.SetRootObj(const Value: T);
 begin
-  FMainObj := Value;
+  FRootObj := Value;
 end;
 
 function TSvAbstractSerializer<T>.SetValue(const AFrom: T; const AObj: TValue; AProp: TRttiProperty;
@@ -1732,11 +1693,13 @@ end;
 class constructor TSvRttiInfo.Create;
 begin
   FCtx := TRttiContext.Create;
+  FRegisteredConstructors := TDictionary<PTypeInfo,TConstructorMethod>.Create;
 end;
 
 class destructor TSvRttiInfo.Destroy;
 begin
   FCtx.Free;
+  FRegisteredConstructors.Free;
 end;
 
 class function TSvRttiInfo.FindType(const AQualifiedName: string): TRttiType;
@@ -1800,6 +1763,11 @@ begin
     Result := AProp.GetValue(AInstance.GetReferenceToRawData);
 end;
 
+class procedure TSvRttiInfo.RegisterConstructor(ATypeInfo: PTypeInfo; AMethod: TConstructorMethod);
+begin
+  FRegisteredConstructors.AddOrSetValue(ATypeInfo, AMethod);
+end;
+
 class procedure TSvRttiInfo.SetValue(AField: TRttiField; const AInstance, AValue: TValue);
 begin
   if AInstance.IsObject then
@@ -1825,6 +1793,35 @@ class function TSvRttiInfo.GetType(const Value: TValue): TRttiType;
 begin
   Result := GetType(Value.TypeInfo);
 end;
+
+class function TSvRttiInfo.CreateType(ATypeInfo: PTypeInfo): TObject;
+var
+  LType: TRttiType;
+  LMethCreate: TRttiMethod;
+  LInstanceType: TRttiInstanceType;
+  LRegisteredConstructorMethod: TConstructorMethod;
+begin
+  if FRegisteredConstructors.TryGetValue(ATypeInfo, LRegisteredConstructorMethod) then
+  begin
+    Result := LRegisteredConstructorMethod();
+  end
+  else
+  begin
+    LType := GetType(ATypeInfo);
+    for LMethCreate in LType.GetMethods do
+    begin
+      if (LMethCreate.IsConstructor) and (Length(LMethCreate.GetParameters) = 0)  then
+      begin
+        LInstanceType := LType.AsInstance;
+
+        Result := LMethCreate.Invoke(LInstanceType.MetaclassType, []).AsObject;
+        Exit;
+      end;
+    end;
+    Result := nil;
+  end;
+end;
+
 
 { TSvObjectHelper }
 
