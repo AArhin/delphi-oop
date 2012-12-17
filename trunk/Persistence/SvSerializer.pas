@@ -1407,6 +1407,29 @@ begin
       begin
         Result := TValue.FromVariant(GetAsString(AJsonString));
       end;
+      tkFloat:
+      begin
+        if (TypeInfo(TDate) = AType.Handle) then
+        begin
+          Result := StrToDateDef(GetAsString(AJsonString), MinDateTime, FFormatSettings);
+        end
+        else if (TypeInfo(TDateTime) = AType.Handle) then
+        begin
+          Result := StrToDateTimeDef(GetAsString(AJsonString), MinDateTime, FFormatSettings);
+        end
+        else
+        begin
+          Result := StrToFloatDef(GetAsString(AJsonString), 0, FFormatSettings);
+        end;
+      end;
+      tkInteger:
+      begin
+        Result := StrToIntDef(GetAsString(AJsonString), 0);
+      end;
+      tkInt64:
+      begin
+        Result := StrToInt64Def(GetAsString(AJsonString), 0);
+      end;
       tkUString, tkWString, tkLString, tkWChar, tkChar, tkString:
       begin
         //avoid skip
