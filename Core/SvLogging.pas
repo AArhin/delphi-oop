@@ -50,12 +50,26 @@ type
 
   ISvLogger = interface(IInvokable)
   ['{38711C0A-B5D1-4147-A05C-B54D86BAA650}']
+    procedure Fatal(const AMessage: string; AException: Exception = nil);
+    procedure Error(const AMessage: string; AException: Exception = nil);
+    procedure Warn(const AMessage: string; AException: Exception = nil);
+    procedure Info(const AMessage: string; AException: Exception = nil);
+    procedure Debug(const AMessage: string; AException: Exception = nil);
+    procedure Trace(const AMessage: string; AException: Exception = nil);
+
     procedure Log(ALevel: TSvLogLevel; const AMessage: string; AException: Exception = nil);
     procedure LogFmt(ALevel: TSvLogLevel; const AMessage: string; const AParameters: array of const; AException: Exception = nil);
   end;
 
   TSvBaseLogger = class(TInterfacedObject, ISvLogger)
   public
+    procedure Fatal(const AMessage: string; AException: Exception = nil);
+    procedure Error(const AMessage: string; AException: Exception = nil);
+    procedure Warn(const AMessage: string; AException: Exception = nil);
+    procedure Info(const AMessage: string; AException: Exception = nil);
+    procedure Debug(const AMessage: string; AException: Exception = nil);
+    procedure Trace(const AMessage: string; AException: Exception = nil);
+
     procedure Log(ALevel: TSvLogLevel; const AMessage: string; AException: Exception = nil); virtual; abstract;
     procedure LogFmt(ALevel: TSvLogLevel; const AMessage: string; const AParameters: array of const; AException: Exception = nil); virtual;
   end;
@@ -66,9 +80,39 @@ implementation
 
 { TSvBaseLogger }
 
+procedure TSvBaseLogger.Debug(const AMessage: string; AException: Exception);
+begin
+  Log(TSvLogLevel.Debug, AMessage, AException);
+end;
+
+procedure TSvBaseLogger.Error(const AMessage: string; AException: Exception);
+begin
+  Log(TSvLogLevel.Error, AMessage, AException);
+end;
+
+procedure TSvBaseLogger.Fatal(const AMessage: string; AException: Exception);
+begin
+  Log(TSvLogLevel.Fatal, AMessage, AException);
+end;
+
+procedure TSvBaseLogger.Info(const AMessage: string; AException: Exception);
+begin
+  Log(TSvLogLevel.Info, AMessage, AException);
+end;
+
 procedure TSvBaseLogger.LogFmt(ALevel: TSvLogLevel; const AMessage: string; const AParameters: array of const; AException: Exception = nil);
 begin
   Log(ALevel, Format(AMessage, AParameters), AException);
+end;
+
+procedure TSvBaseLogger.Trace(const AMessage: string; AException: Exception);
+begin
+  Log(TSvLogLevel.Trace, AMessage, AException);
+end;
+
+procedure TSvBaseLogger.Warn(const AMessage: string; AException: Exception);
+begin
+  Log(TSvLogLevel.Warn, AMessage, AException);
 end;
 
 end.
