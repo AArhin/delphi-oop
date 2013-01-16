@@ -180,6 +180,7 @@ type
     function DoGetFromArray(const AFrom: TValue; AProp: TRttiProperty): T; virtual;
     function DoGetFromClass(const AFrom: TValue; AProp: TRttiProperty): T; virtual;
     function DoGetFromEnum(const AFrom: TValue; AProp: TRttiProperty): T; virtual;
+    function DoGetFromInterface(const AFrom: TValue; AProp: TRttiProperty): T; virtual;
     function DoGetFromRecord(const AFrom: TValue; AProp: TRttiProperty): T; virtual;
     function DoGetFromVariant(const AFrom: TValue; AProp: TRttiProperty): T; virtual;
     //
@@ -1000,7 +1001,7 @@ begin
         LCurrentProp := LEnumType.GetProperty('Current');
         Assert(Assigned(LMoveNextMethod), 'MoveNext method not found');
         Assert(Assigned(LCurrentProp), 'Current property not found');
-        while LMoveNextMethod.Invoke(LEnumerator.AsObject,[]).asBoolean do
+        while LMoveNextMethod.Invoke(LEnumerator,[]).asBoolean do
         begin
           ArrayAdd(LJsonArray, GetValue(LCurrentProp.GetValue(LEnumerator.AsObject), LCurrentProp));
         end;
@@ -1042,6 +1043,43 @@ begin
   else
   begin
     Result := CreateString(AFrom.ToString);
+  end;
+end;
+
+function TSvAbstractSerializer<T>.DoGetFromInterface(const AFrom: TValue; AProp: TRttiProperty): T;
+var
+  LJsonArray: T;
+  LEnumType, LFromType: TRttiType;
+  LEnumMethod, LMoveNextMethod: TRttiMethod;
+  LEnumerator: TValue;
+  LCurrentMethod: TRttiMethod;
+begin
+  LFromType := TSvRttiInfo.GetType(AFrom);
+
+  if not IsTypeEnumerable(LFromType, LEnumMethod) then
+  begin
+    Result := CreateString('Unsupported interface type. Must be enumerable.');
+  end;
+
+  Result := CreateArray;
+  LJsonArray := Result;
+  LEnumerator := LEnumMethod.Invoke(AFrom,[]);
+  LEnumType :=  TRttiContext.Create.GetType(LEnumerator.TypeInfo);
+  LMoveNextMethod := LEnumType.GetMethod('MoveNext');
+  LCurrentMethod := LEnumType.GetMethod('GetCurrent');
+  if not Assigned(LCurrentMethod) then
+    LCurrentMethod := LEnumType.GetMethod('DoGetCurrent');
+
+  Assert(Assigned(LMoveNextMethod), 'MoveNext method not found');
+  Assert(Assigned(LCurrentMethod), 'GetCurrent method not found');
+  while LMoveNextMethod.Invoke(LEnumerator,[]).asBoolean do
+  begin
+    ArrayAdd(LJsonArray, GetValue(LCurrentMethod.Invoke(LEnumerator, []), nil));
+  end;
+
+  if LEnumerator.IsObject then
+  begin
+    LEnumerator.AsObject.Free;
   end;
 end;
 
@@ -1088,6 +1126,7 @@ var
   LParamsArray: TArray<TRttiParameter>;
   LJsonArray: T;
   LEnumArray: TArray<TEnumEntry<T>>;
+  LInterface: IInterface;
 begin
   bCreated := False;
   LValue := TValue.Empty;
@@ -1117,14 +1156,21 @@ begin
 
         Result := TValue.FromArray(AType.Handle, arrVal);
       end;
-      tkClass:
+     { tkInterface:
+      begin
+        if not Assigned(AType) then
+          Exit;
+
+
+      end; }
+      tkClass, tkInterface:
       begin
         if Assigned(AType) then
         begin
           if Assigned(AProp) then
           begin
             Result := TSvRttiInfo.GetValue(AProp, AObj);
-            if Result.AsObject is TDataSet then
+            if (Result.IsObject) and (Result.AsObject is TDataSet) then
             begin
               //deserialize TDataSet
               LDst := TDataSet(Result.AsObject);  
@@ -1192,10 +1238,19 @@ begin
               LValue := TSvRttiInfo.GetValue(AProp, AObj);
            // AValue := AProp.GetValue(AObj);
 
-            if LValue.AsObject = nil then
+            if (LValue.IsObject) and (LValue.AsObject = nil) then
             begin
               LValue := TSvRttiInfo.CreateType(AProp.PropertyType.Handle);
               bCreated := True;
+            end;
+
+            if (LValue.Kind = tkInterface) and (Assigned(AProp)) then
+            begin
+              if Supports(LValue.AsInterface, (AProp.PropertyType as TRttiInterfaceType).GUID, LInterface) then
+              begin
+                TValue.Make(@LInterface, AProp.PropertyType.Handle, LValue);
+                bCreated := True;
+              end;
             end;
 
             LClearMethod := TSvRttiInfo.GetBasicMethod('Clear', AType);
@@ -1245,7 +1300,7 @@ begin
                 LJsonValue := GetArrayElement(LJsonArray, i);   
                 {TODO -oLinas -cGeneral : fix arguments}
                 //AParams[0].ParamType.AsInstance.
-                arrVal[i] := SetValue(LJsonValue, AObj, nil, LParamsArray[0].ParamType, ASkip); 
+                arrVal[i] := SetValue(LJsonValue, AObj, nil, LParamsArray[0].ParamType, ASkip);
                 LEnumerator := LEnumMethod.Invoke(LValue, [arrVal[i]]);
               end;
             end;
@@ -1538,6 +1593,10 @@ begin
       begin
         Result := DoGetFromClass(AFrom, AProp);
       end;
+      tkInterface:
+      begin
+        Result := DoGetFromInterface(AFrom, AProp);
+      end;
       tkRecord:
       begin
         Result := DoGetFromRecord(AFrom, AProp);
@@ -1576,7 +1635,7 @@ end;
 
 function TSvAbstractSerializer<T>.IsTypeEnumerable(ARttiType: TRttiType; out AEnumMethod: TRttiMethod): Boolean;
 begin
-  AEnumMethod := ARttiType.GetMethod('GetEnumerator');     
+  AEnumMethod := ARttiType.GetMethod('GetEnumerator');
   Result := Assigned(AEnumMethod);
 end;
 
