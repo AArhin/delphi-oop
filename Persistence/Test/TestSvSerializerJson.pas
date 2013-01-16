@@ -139,7 +139,80 @@ type
     property Name: string read GetName write SetName;
   end;
 
+  IListEnumerator<T> = interface(IInvokable)
+    ['{4843AFBF-86D0-4C66-ADE1-E9432AB44E66}']
+    function GetCurrent(): T;
+    function MoveNext(): Boolean;
+    property Current: T read GetCurrent;
+  end;
 
+  IList<T> = interface(IInvokable)
+    ['{6C1FDDD9-8E9F-435B-B484-4E5BF34F78A5}']
+    function GetEnumerator(): IListEnumerator<T>;
+
+    function Add(AValue: T): Integer;
+    procedure Clear();
+    function GetValue(AIndex: Integer): T;
+    function GetCount: Integer;
+  end;
+
+  IObjectList<T: class> = interface(IList<T>)
+  end;
+
+  TTestEnumerator<T> = class(TInterfacedObject, IListEnumerator<T>)
+  private
+    FList: TObject;
+    FIndex: Integer;
+  public
+    constructor Create(AList: TObject); virtual;
+
+    function GetCurrent(): T;
+    function MoveNext(): Boolean;
+    property Current: T read GetCurrent;
+  end;
+
+  TTestList<T> = class(TInterfacedObject, IList<T>)
+  private
+    FList: TList<T>;
+  public
+    constructor Create(); virtual;
+    destructor Destroy; override;
+
+    function GetEnumerator(): IListEnumerator<T>;
+
+    function Add(AValue: T): Integer;
+    procedure Clear();
+    function GetValue(AIndex: Integer): T;
+    function GetCount: Integer;
+  end;
+
+  TTestObjectList<T: class> = class(TInterfacedObject, IObjectList<T>)
+  private
+    FList: TObjectList<T>;
+  public
+    constructor Create(); virtual;
+    destructor Destroy; override;
+
+    function GetEnumerator(): IListEnumerator<T>;
+
+    function Add(AValue: T): Integer;
+    procedure Clear();
+    function GetValue(AIndex: Integer): T;
+    function GetCount: Integer;
+  end;
+
+  TBeanTestIntf = class
+  private
+    FList: IList<string>;
+    FListObj: IObjectList<TBean>;
+  public
+    constructor Create(); virtual;
+    destructor Destroy; override;
+
+
+    property List: IList<string> read FList write FList;
+    property ListObj: IObjectList<TBean> read FListObj write FListObj;
+  end;
 
 
   (* say our JQGrid defined as:
@@ -314,6 +387,7 @@ type
     procedure TestOwnedObjects();
     procedure TestHelper();
     procedure TestRegisteredConstructor();
+    procedure TestInterfaceList();
   end;
 
   TestTSvSuperJsonSerializer = class(TestTSvJsonSerializerFactory)
@@ -628,6 +702,38 @@ begin
   LBean := THelperTest.FromJsonString(HELPER_JSON);
   try
     CheckEqualsString('Bar', LBean.Foo);
+  finally
+    LBean.Free;
+  end;
+end;
+
+procedure TestTSvJsonSerializerFactory.TestInterfaceList;
+var
+  LBean: TBeanTestIntf;
+  LAddBean: TBean;
+  LJson: string;
+begin
+  LBean := TBeanTestIntf.Create;
+  try
+    LBean.List.Add('Foo');
+    LBean.List.Add('Bar');
+
+  //  LAddBean := TBean.Create;
+  //  LAddBean.FirstName := '1Bean';
+    //LBean.ListObj.Add(LAddBean);
+
+    LJson := '';
+    LJson := LBean.ToJsonString;
+    CheckTrue(LJson <> '');
+    LBean.Free;
+
+    LBean := TBeanTestIntf.Create;
+    LBean.FromSerializedString(LJson, sstSuperJson);
+    CheckTrue(Assigned(LBean.List), 'Interface not assigned');
+    CheckEquals(2, LBean.List.GetCount);
+    CheckEquals('Foo', LBean.List.GetValue(0));
+    CheckEquals('Bar', LBean.List.GetValue(1));
+//    CheckEquals('1Bean', LBean.ListObj.GetValue(0).FirstName);
   finally
     LBean.Free;
   end;
@@ -1323,6 +1429,120 @@ begin
   inherited Create();
   FName := AName;
   FValue := AValue;
+end;
+
+{ TTestList<T> }
+
+function TTestList<T>.Add(AValue: T): Integer;
+begin
+  Result := FList.Add(AValue);
+end;
+
+procedure TTestList<T>.Clear;
+begin
+  FList.Clear;
+end;
+
+constructor TTestList<T>.Create;
+begin
+  inherited Create;
+  FList := TList<T>.Create;
+end;
+
+destructor TTestList<T>.Destroy;
+begin
+  FList.Free;
+  inherited;
+end;
+
+function TTestList<T>.GetCount: Integer;
+begin
+  Result := FList.Count;
+end;
+
+function TTestList<T>.GetEnumerator: IListEnumerator<T>;
+begin
+  Result := TTestEnumerator<T>.Create(Self);
+end;
+
+function TTestList<T>.GetValue(AIndex: Integer): T;
+begin
+  Result := FList[AIndex];
+end;
+
+{ TTestEnumerator<T> }
+
+constructor TTestEnumerator<T>.Create(AList: TObject);
+begin
+  inherited Create;
+  FList := AList;
+  FIndex := -1;
+end;
+
+function TTestEnumerator<T>.GetCurrent: T;
+begin
+  Result := TTestList<T>(FList).GetValue(FIndex);
+end;
+
+function TTestEnumerator<T>.MoveNext: Boolean;
+begin
+  if FIndex >= TTestList<T>(FList).GetCount then
+    Exit(False);
+  Inc(FIndex);
+  Result := FIndex < TTestList<T>(FList).GetCount;
+end;
+
+{ TBeanTestIntf }
+
+constructor TBeanTestIntf.Create;
+begin
+  inherited Create;
+  FList := TTestList<string>.Create;
+ // FListObj := TTestObjectList<TBean>.Create;
+end;
+
+destructor TBeanTestIntf.Destroy;
+begin
+  inherited;
+end;
+
+{ TTestObjectList<T> }
+
+function TTestObjectList<T>.Add(AValue: T): Integer;
+begin
+  Result := FList.Add(AValue);
+end;
+
+procedure TTestObjectList<T>.Clear;
+begin
+  FList.Clear;
+end;
+
+constructor TTestObjectList<T>.Create;
+begin
+  inherited Create;
+  FList := TObjectList<T>.Create(True);
+end;
+
+destructor TTestObjectList<T>.Destroy;
+begin
+  FList.Free;
+  inherited;
+end;
+
+function TTestObjectList<T>.GetCount: Integer;
+begin
+  Result := FList.Count;
+end;
+
+function TTestObjectList<T>.GetEnumerator: IListEnumerator<T>;
+begin
+  Result := TTestEnumerator<T>.Create(Self);
+end;
+
+function TTestObjectList<T>.GetValue(AIndex: Integer): T;
+begin
+  Result := FList[AIndex];
 end;
 
 initialization
