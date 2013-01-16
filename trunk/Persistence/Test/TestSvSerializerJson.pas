@@ -710,7 +710,7 @@ end;
 procedure TestTSvJsonSerializerFactory.TestInterfaceList;
 var
   LBean: TBeanTestIntf;
-  LAddBean: TBean;
+ // LAddBean: TBean;
   LJson: string;
 begin
   LBean := TBeanTestIntf.Create;
@@ -719,8 +719,8 @@ begin
     LBean.List.Add('Bar');
 
   //  LAddBean := TBean.Create;
-  //  LAddBean.FirstName := '1Bean';
-    //LBean.ListObj.Add(LAddBean);
+   // LAddBean.FirstName := '1Bean';
+   // LBean.ListObj.Add(LAddBean);
 
     LJson := '';
     LJson := LBean.ToJsonString;
@@ -733,7 +733,7 @@ begin
     CheckEquals(2, LBean.List.GetCount);
     CheckEquals('Foo', LBean.List.GetValue(0));
     CheckEquals('Bar', LBean.List.GetValue(1));
-//    CheckEquals('1Bean', LBean.ListObj.GetValue(0).FirstName);
+  //  CheckEquals('1Bean', LBean.ListObj.GetValue(0).FirstName);
   finally
     LBean.Free;
   end;
