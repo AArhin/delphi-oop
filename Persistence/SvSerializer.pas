@@ -1126,7 +1126,6 @@ var
   LParamsArray: TArray<TRttiParameter>;
   LJsonArray: T;
   LEnumArray: TArray<TEnumEntry<T>>;
-  LInterface: IInterface;
 begin
   bCreated := False;
   LValue := TValue.Empty;
@@ -1156,13 +1155,6 @@ begin
 
         Result := TValue.FromArray(AType.Handle, arrVal);
       end;
-     { tkInterface:
-      begin
-        if not Assigned(AType) then
-          Exit;
-
-
-      end; }
       tkClass, tkInterface:
       begin
         if Assigned(AType) then
@@ -1242,15 +1234,6 @@ begin
             begin
               LValue := TSvRttiInfo.CreateType(AProp.PropertyType.Handle);
               bCreated := True;
-            end;
-
-            if (LValue.Kind = tkInterface) and (Assigned(AProp)) then
-            begin
-              if Supports(LValue.AsInterface, (AProp.PropertyType as TRttiInterfaceType).GUID, LInterface) then
-              begin
-                TValue.Make(@LInterface, AProp.PropertyType.Handle, LValue);
-                bCreated := True;
-              end;
             end;
 
             LClearMethod := TSvRttiInfo.GetBasicMethod('Clear', AType);
