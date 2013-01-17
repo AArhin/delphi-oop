@@ -53,9 +53,12 @@ type
     property Name: string read FName;
   end;
 
-  /// <remarks>
-  /// Properties marked as [SvTransient] are ignored during serialization/deserialization
-  /// </remarks>
+  {$REGION 'Documentation'}
+  ///	<remarks>
+  ///	  Properties marked as [SvTransient] are ignored during
+  ///	  serialization/deserialization
+  ///	</remarks>
+  {$ENDREGION}
   SvTransientAttribute = class(TCustomAttribute);
 
   ESvSerializeException = class(Exception);
@@ -235,9 +238,12 @@ type
     property StringStream: TStringStream read FStringStream;
   end;
 
-  /// <summary>
-  /// Serializer class which can serialize almost any type to a file or a stream
-  /// </summary>
+  {$REGION 'Documentation'}
+  ///	<summary>
+  ///	  Serializer class which can serialize almost any type to a file or a
+  ///	  stream
+  ///	</summary>
+  {$ENDREGION}
   TSvSerializer = class
   private
     FObjs: TDictionary<string, TPair<TValue,TStringDynArray>>;
@@ -252,32 +258,62 @@ type
     procedure DoSerialize(AStream: TStream); virtual;
     procedure DoDeSerialize(AStream: TStream); virtual;
   protected
+    procedure AddOneObject(AObject: TObject); virtual;
+
     property Errors: TList<string> read FErrors;
   public
     constructor Create(AFormat: TSvSerializeFormat = sstJson); virtual;
     destructor Destroy; override;
 
     function CreateConcreateSerializer(): ISerializer;
-    /// <summary>
-    /// Adds object to be used in serialization. Properties will be serialized with SvSerialize attribute
-    /// </summary>
-    /// <param name="AKey">unique key name which defines where to store object properties</param>
-    /// <param name="obj">object to serialize</param>
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Adds object to be used in serialization. Properties will be
+    ///	  serialized with SvSerialize attribute
+    ///	</summary>
+    ///	<param name="AKey">
+    ///	  unique key name which defines where to store object properties
+    ///	</param>
+    ///	<param name="obj">
+    ///	  object to serialize
+    ///	</param>
+    {$ENDREGION}
     procedure AddObject(const AKey: string; const obj: TObject);
-    /// <summary>
-    /// Adds object and it's named properties which will be used in serialization
-    /// </summary>
-    /// <param name="AKey">unique key name which defines where to store object properties</param>
-    /// <param name="obj">object to serialize</param>
-    /// <param name="APropNames">object properties to serialize</param>
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Adds object and it's named properties which will be used in
+    ///	  serialization
+    ///	</summary>
+    ///	<param name="AKey">
+    ///	  unique key name which defines where to store object properties
+    ///	</param>
+    ///	<param name="obj">
+    ///	  object to serialize
+    ///	</param>
+    ///	<param name="APropNames">
+    ///	  object properties to serialize
+    ///	</param>
+    {$ENDREGION}
     procedure AddObjectCustomProperties(const AKey: string; const obj: TObject;
       APropNames: array of string);
-    /// <summary>
-    /// Adds object and all of it's properties in given visibility which will be used in serialization
-    /// </summary>
-    /// <param name="AKey">unique key name which defines where to store object properties</param>
-    /// <param name="obj">object to serialize</param>
-    /// <param name="AVisibilities">Visibilities of properties to serialize</param>
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Adds object and all of it's properties in given visibility which will
+    ///	  be used in serialization
+    ///	</summary>
+    ///	<param name="AKey">
+    ///	  unique key name which defines where to store object properties
+    ///	</param>
+    ///	<param name="obj">
+    ///	  object to serialize
+    ///	</param>
+    ///	<param name="AVisibilities">
+    ///	  Visibilities of properties to serialize
+    ///	</param>
+    {$ENDREGION}
     procedure AddObjectProperties(const AKey: string; const obj: TObject;
       AVisibilities: TSvVisibilities = [mvPublished]);
     procedure RemoveObject(const AKey: string); overload;
@@ -291,59 +327,155 @@ type
     class function TryGetAttribute(AProp: TRttiProperty; out AAtribute: SvSerialize): Boolean;
     
     class function GetPropertyByName(const APropName: string; ARttiType: TRttiType): TRttiProperty;
-    /// <summary>
-    /// Deserializes all added objects from the file
-    /// </summary>
-    /// <param name="AFilename">filename from where to load object's properties</param>
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Deserializes all added objects from the file
+    ///	</summary>
+    ///	<param name="AFilename">
+    ///	  filename from where to load object's properties
+    ///	</param>
+    {$ENDREGION}
     procedure DeSerialize(const AFromFilename: string); overload; virtual;
-    /// <summary>
-    /// Deserializes all added objects from the stream
-    /// </summary>
-    /// <param name="AStream">stream from where to load object's properties</param>
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Deserializes all added objects from the stream
+    ///	</summary>
+    ///	<param name="AStream">
+    ///	  stream from where to load object's properties
+    ///	</param>
+    {$ENDREGION}
     procedure DeSerialize(AFromStream: TStream); overload; virtual;
-    /// <summary>
-    /// Deserializes all added objects from the string
-    /// </summary>
-    /// <param name="AStream">stream from where to load object's properties</param>
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Deserializes all added objects from the string
+    ///	</summary>
+    ///	<param name="AStream">
+    ///	  stream from where to load object's properties
+    ///	</param>
+    {$ENDREGION}
     procedure DeSerialize(const AFromString: string; const AEncoding: TEncoding); overload;
-    /// <summary>
-    /// Serializes all added objects to the file
-    /// </summary>
-    /// <param name="AFilename">filename where to store objects</param>
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Serializes all added objects to the file
+    ///	</summary>
+    ///	<param name="AFilename">
+    ///	  filename where to store objects
+    ///	</param>
+    {$ENDREGION}
     procedure Serialize(const AToFilename: string); overload; virtual;
-    /// <summary>
-    /// Serializes all added objects to the stream
-    /// </summary>
-    /// <param name="AStream">stream where to store objects</param>
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Serializes all added objects to the stream.
+    ///	</summary>
+    ///	<param name="AStream">
+    ///	  stream where to store objects
+    ///	</param>
+    {$ENDREGION}
     procedure Serialize(AToStream: TStream); overload; virtual;
-    /// <summary>
-    /// Serializes all added objects to the string
-    /// </summary>
-    /// <param name="AStream">stream where to store objects</param>
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Serializes all added objects to the string
+    ///	</summary>
+    ///	<param name="AStream">
+    ///	  stream where to store objects
+    ///	</param>
+    {$ENDREGION}
     procedure Serialize(var AToString: string; const AEncoding: TEncoding); overload; virtual;
-    /// <summary>
-    ///  Marshalls record's properties into stream
-    /// </summary>
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Simplified method for serializing only given <c>TObject</c>. All
+    ///	  other added object will be cleared from the <c>Serializer</c>.
+    ///	</summary>
+    {$ENDREGION}
+    class procedure SerializeObject(AObject: TObject; var AToString: string; AOutputFormat: TSvSerializeFormat = sstSuperJson); overload;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Simplified method for serializing only given <c>TObject</c>. All
+    ///	  other added object will be cleared from the <c>Serializer</c>.
+    ///	</summary>
+    {$ENDREGION}
+    class procedure SerializeObject(AObject: TObject; AToStream: TStream; AOutputFormat: TSvSerializeFormat = sstSuperJson); overload;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Simplified method for serializing only given <c>TObject</c>. All
+    ///	  other added object will be cleared from the <c>Serializer</c>.
+    ///	</summary>
+    {$ENDREGION}
+    class procedure SerializeObjectToFilename(AObject: TObject; const AFilename: string; AOutputFormat: TSvSerializeFormat = sstSuperJson);
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Simplified method for deserializing only given <c>TObject</c>. All
+    ///	  other added object will be cleared from the <c>Serializer</c>.
+    ///	</summary>
+    {$ENDREGION}
+    class procedure DeSerializeObject(AObject: TObject; const AFromString: string; AOutputFormat: TSvSerializeFormat = sstSuperJson); overload;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Simplified method for deserializing only given <c>TObject</c>. All
+    ///	  other added object will be cleared from the <c>Serializer</c>.
+    ///	</summary>
+    {$ENDREGION}
+    class procedure DeSerializeObject(AObject: TObject; AFromStream: TStream; AOutputFormat: TSvSerializeFormat = sstSuperJson); overload;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Simplified method for deserializing only given <c>TObject</c>. All
+    ///	  other added object will be cleared from the <c>Serializer</c>.
+    ///	</summary>
+    {$ENDREGION}
+    class procedure DeSerializeObjectFromFilename(AObject: TObject; const AFilename: string; AOutputFormat: TSvSerializeFormat = sstSuperJson);
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Marshalls record's properties into stream
+    ///	</summary>
+    {$ENDREGION}
     procedure Marshall<T: record>(const AWhat: T; AToStream: TStream); overload;
-    /// <summary>
-    ///  Marshalls record's properties into file
-    /// </summary>
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Marshalls record's properties into file
+    ///	</summary>
+    {$ENDREGION}
     procedure Marshall<T: record>(const AWhat: T; var AToString: string; const AEncoding: TEncoding); overload;
-    /// <summary>
-    ///  Marshalls record's properties into string
-    /// </summary>
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Marshalls record's properties into string
+    ///	</summary>
+    {$ENDREGION}
     procedure Marshall<T: record>(const AWhat: T; const AToFilename: string); overload;
-    /// <summary>
-    ///  Returns record unmarshalled from stream
-    /// </summary>
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Returns record unmarshalled from stream
+    ///	</summary>
+    {$ENDREGION}
     function UnMarshall<T: record>(AFromStream: TStream): T; overload;
-    /// <summary>
-    ///  Returns record unmarshalled from file
-    /// </summary>
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Returns record unmarshalled from file
+    ///	</summary>
+    {$ENDREGION}
     function UnMarshall<T: record>(const AFromFilename: string): T; overload;
-    /// <summary>
-    ///  Returns record unmarshalled from string
-    /// </summary>
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Returns record unmarshalled from string
+    ///	</summary>
+    {$ENDREGION}
     function UnMarshall<T: record>(const AFromString: string; AEncoding: TEncoding): T; overload;
 
     function GetErrors(): TArray<string>;
@@ -459,6 +591,12 @@ begin
   end;
 end;
 
+procedure TSvSerializer.AddOneObject(AObject: TObject);
+begin
+  ClearObjects;
+  AddObject('', AObject);
+end;
+
 procedure TSvSerializer.ClearObjects;
 begin
   FObjs.Clear;
@@ -505,6 +643,45 @@ begin
     DeSerialize(ss);
   finally
     ss.Free;
+  end;
+end;
+
+class procedure TSvSerializer.DeSerializeObject(AObject: TObject; const AFromString: string; AOutputFormat: TSvSerializeFormat);
+var
+  LSerializer: TSvSerializer;
+begin
+  LSerializer := TSvSerializer.Create(AOutputFormat);
+  try
+    LSerializer.AddObject('', AObject);
+    LSerializer.DeSerialize(AFromString, TEncoding.UTF8);
+  finally
+    LSerializer.Free;
+  end;
+end;
+
+class procedure TSvSerializer.DeSerializeObject(AObject: TObject; AFromStream: TStream; AOutputFormat: TSvSerializeFormat);
+var
+  LSerializer: TSvSerializer;
+begin
+  LSerializer := TSvSerializer.Create(AOutputFormat);
+  try
+    LSerializer.AddObject('', AObject);
+    LSerializer.DeSerialize(AFromStream);
+  finally
+    LSerializer.Free;
+  end;
+end;
+
+class procedure TSvSerializer.DeSerializeObjectFromFilename(AObject: TObject; const AFilename: string; AOutputFormat: TSvSerializeFormat);
+var
+  LSerializer: TSvSerializer;
+begin
+  LSerializer := TSvSerializer.Create(AOutputFormat);
+  try
+    LSerializer.AddObject('', AObject);
+    LSerializer.DeSerialize(AFilename);
+  finally
+    LSerializer.Free;
   end;
 end;
 
@@ -718,6 +895,45 @@ begin
     AToString := ss.DataString;
   finally
     ss.Free;
+  end;
+end;
+
+class procedure TSvSerializer.SerializeObject(AObject: TObject; AToStream: TStream; AOutputFormat: TSvSerializeFormat);
+var
+  LSerializer: TSvSerializer;
+begin
+  LSerializer := TSvSerializer.Create(AOutputFormat);
+  try
+    LSerializer.AddObject('', AObject);
+    LSerializer.Serialize(AToStream);
+  finally
+    LSerializer.Free;
+  end;
+end;
+
+class procedure TSvSerializer.SerializeObjectToFilename(AObject: TObject; const AFilename: string; AOutputFormat: TSvSerializeFormat);
+var
+  LSerializer: TSvSerializer;
+begin
+  LSerializer := TSvSerializer.Create(AOutputFormat);
+  try
+    LSerializer.AddObject('', AObject);
+    LSerializer.Serialize(AFilename);
+  finally
+    LSerializer.Free;
+  end;
+end;
+
+class procedure TSvSerializer.SerializeObject(AObject: TObject; var AToString: string; AOutputFormat: TSvSerializeFormat);
+var
+  LSerializer: TSvSerializer;
+begin
+  LSerializer := TSvSerializer.Create(AOutputFormat);
+  try
+    LSerializer.AddObject('', AObject);
+    LSerializer.Serialize(AToString, TEncoding.UTF8);
+  finally
+    LSerializer.Free;
   end;
 end;
 
