@@ -162,6 +162,14 @@ type
     procedure BeginDeSerialization(AStream: TStream); override;
     procedure EndDeSerialization(AStream: TStream); override;
 
+    function DeserializeDataset(AArray: T; var AValue: TValue): Boolean; virtual;
+    function SerializeDataset(const ADataset: TValue): T; virtual;
+    function SerializeEnumerable(const AEnumerable: TValue; AEnumMethod: TRttiMethod): T; virtual;
+
+    function TryDeserializeContainer(AArray: T; var AValue: TValue; AType: TRttiType
+      ; var ACreated: Boolean; AProp: TRttiProperty; const AObj: TValue; var ASkip: Boolean): Boolean; virtual;
+    procedure SetClassProperties(var AValue: TValue; var ASkip: Boolean; AType: TRttiType; AObjectToEnumerate: T); virtual;
+
     function FindRecordFieldName(const AFieldName: string; ARecord: TRttiRecordType): TRttiField; virtual;
 
     procedure SerializeObject(const AKey: string; const obj: TValue; AStream: TStream;
@@ -306,6 +314,7 @@ type
     procedure DoDeSerialize(AStream: TStream); virtual;
   protected
     procedure AddOneObject(AObject: TObject); virtual;
+
 
     property Errors: TList<string> read FErrors;
   public
@@ -1090,6 +1099,59 @@ begin
   FOldFormatSettings := FormatSettings;
 end;
 
+function TSvAbstractSerializer<T>.DeserializeDataset(AArray: T; var AValue: TValue): Boolean;
+var
+  LDst: TDataSet;
+  i, x: Integer;
+  LJsonValue: T;
+  LEnumArray: TArray<TEnumEntry<T>>;
+  sVal: string;
+  LField: TField;
+begin
+  Result := False;
+  LDst := TDataSet(AValue.AsObject);
+  if IsAssigned(AArray) then
+  begin
+    LDst.DisableControls;
+    FormatSettings := FFormatSettings;
+    try
+      for i := 0 to GetArraySize(AArray) - 1 do
+      begin
+        try
+          LDst.Append;
+          LJsonValue := GetArrayElement(AArray, i);
+          LEnumArray := EnumerateObject(LJsonValue);
+          for x := 0 to Length(LEnumArray) - 1 do
+          begin
+            //get fieldname from json object
+            sVal := LEnumArray[x].Key;
+            LField := LDst.FindField(sVal);
+            if Assigned(LField) then
+            begin
+              //check if not null
+              if IsNull(LEnumArray[x].Value) then
+                LField.Clear
+              else
+                LField.AsString := GetAsString(LEnumArray[x].Value);
+            end;
+          end;
+
+          LDst.Post;
+        except
+          on E:Exception do
+          begin
+            PostError(E.Message);
+          end;
+        end;
+      end;
+      Result := True;
+    finally
+      LDst.EnableControls;
+      FormatSettings := FOldFormatSettings;
+    end;
+  end;
+end;
+
 procedure TSvAbstractSerializer<T>.DeSerializeObject(const AKey: string; obj: TValue;
   AStream: TStream; ACustomProps: TStringDynArray);
 var
@@ -1205,14 +1267,9 @@ end;
 
 function TSvAbstractSerializer<T>.DoGetFromClass(const AFrom: TValue; AProp: TRttiProperty): T;
 var
-  i, iRecNo: Integer;
-  LJsonArray: T;
-  LJsonObject: T;
-  LType, LEnumType: TRttiType;
-  LEnumMethod, LMoveNextMethod: TRttiMethod;
-  LEnumerator: TValue;
+  LType: TRttiType;
+  LEnumMethod: TRttiMethod;
   LCurrentProp: TRttiProperty;
-  LDst: TDataSet;
 begin
   Result := System.Default(T);
   LType := TSvRttiInfo.GetType(AFrom.TypeInfo);
@@ -1220,59 +1277,13 @@ begin
   begin
     if AFrom.AsObject is TDataset then
     begin
-      LDst := TDataSet(AFrom.AsObject);  
-      Result := CreateArray;
-      LDst.DisableControls;
-      FormatSettings := FFormatSettings;
-      try
-        iRecNo := LDst.RecNo;
-        LDst.First;
-        while not LDst.Eof do
-        begin
-          LJsonObject := CreateObject;
-          for i := 0 to LDst.Fields.Count - 1 do
-          begin
-            if LDst.Fields[i].IsNull then
-            begin
-              ObjectAdd(LJsonObject, LDst.Fields[i].FieldName, CreateNull);
-            end
-            else
-            begin
-              ObjectAdd(LJsonObject, LDst.Fields[i].FieldName, CreateString(LDst.Fields[i].AsString));
-            end;  
-          end; 
-          ArrayAdd(Result, LJsonObject);
-          LDst.Next;
-        end;
-
-        LDst.RecNo := iRecNo;
-      finally
-        FormatSettings := FOldFormatSettings;
-        LDst.EnableControls;
-      end;
+      Result := SerializeDataset(AFrom);
     end
     else
     begin
       if IsTypeEnumerable(LType, LEnumMethod) then
       begin
-        //enumerator exists
-        Result := CreateArray;
-        LJsonArray := Result;
-        LEnumerator := LEnumMethod.Invoke(AFrom,[]);
-        LEnumType :=  TSvRttiInfo.GetType(LEnumerator.TypeInfo);
-        LMoveNextMethod := LEnumType.GetMethod('MoveNext');
-        LCurrentProp := LEnumType.GetProperty('Current');
-        Assert(Assigned(LMoveNextMethod), 'MoveNext method not found');
-        Assert(Assigned(LCurrentProp), 'Current property not found');
-        while LMoveNextMethod.Invoke(LEnumerator,[]).asBoolean do
-        begin
-          ArrayAdd(LJsonArray, GetValue(LCurrentProp.GetValue(LEnumerator.AsObject), LCurrentProp));
-        end;
-
-        if LEnumerator.IsObject then
-        begin
-          LEnumerator.AsObject.Free;
-        end;
+        Result := SerializeEnumerable(AFrom, LEnumMethod);
       end
       else
       begin
@@ -1376,196 +1387,78 @@ end;
 function TSvAbstractSerializer<T>.DoSetFromArray(AJsonArray: T; AType: TRttiType;
   const AObj: TValue; AProp: TRttiProperty; var ASkip: Boolean): TValue;
 var
-  LJsonValue: T;
   arrVal: array of TValue;
-  i, x: Integer;
-  LDst: TDataSet;
-  LField: TField;
-  sVal: string;
+  i: Integer;
   LObject: TObject;
-  LValue, LEnumerator: TValue;
+  LValue: TValue;
   bCreated: Boolean;
-  LEnumMethod, LClearMethod: TRttiMethod;
-  LParamsArray: TArray<TRttiParameter>;
-  LJsonArray: T;
-  LEnumArray: TArray<TEnumEntry<T>>;
 begin
   bCreated := False;
   LValue := TValue.Empty;
   if Assigned(AType) then
   begin
-    LJsonArray := AJsonArray;
     case AType.TypeKind of
       tkArray:
       begin
-        SetLength(arrVal, GetArraySize(LJsonArray));
-
+        SetLength(arrVal, GetArraySize(AJsonArray));
         for i := 0 to Length(arrVal)-1 do
         begin
-          arrVal[i] := SetValue(GetArrayElement(LJsonArray, i), AObj, AProp, TRttiArrayType(AType).ElementType, ASkip);
+          arrVal[i] := SetValue(GetArrayElement(AJsonArray, i), AObj, AProp, TRttiArrayType(AType).ElementType, ASkip);
         end;
-
         Result := TValue.FromArray(AType.Handle, arrVal);
       end;
       tkDynArray:
       begin
-        SetLength(arrVal, GetArraySize(LJsonArray));
-
+        SetLength(arrVal, GetArraySize(AJsonArray));
         for i := 0 to Length(arrVal)-1 do
         begin
-          arrVal[i] := SetValue(GetArrayElement(LJsonArray, i), AObj, AProp, TRttiDynamicArrayType(AType).ElementType, ASkip);
+          arrVal[i] := SetValue(GetArrayElement(AJsonArray, i), AObj, AProp, TRttiDynamicArrayType(AType).ElementType, ASkip);
         end;
-
         Result := TValue.FromArray(AType.Handle, arrVal);
       end;
       tkClass, tkInterface:
       begin
-        if Assigned(AType) then
+        if not Assigned(AType) then
+          Exit;
+
+        if not Assigned(AProp) then
         begin
-          if Assigned(AProp) then
+          //if AProp not assigned then we must create it
+          if AType.IsInstance then
           begin
-            Result := TSvRttiInfo.GetValue(AProp, AObj);
-            if (Result.IsObject) and (Result.AsObject is TDataSet) then
+            LObject := TSvRttiInfo.CreateType(AType.Handle);
+            if Assigned(LObject) then
             begin
-              //deserialize TDataSet
-              LDst := TDataSet(Result.AsObject);  
-              if IsAssigned(LJsonArray) then
-              begin
-                LDst.DisableControls;
-                FormatSettings := FFormatSettings;
-                try
-                  for i := 0 to GetArraySize(LJsonArray) - 1 do
-                  begin
-                    try
-                      LDst.Append;  
-                      LJsonValue := GetArrayElement(LJsonArray, i); 
-                      LEnumArray := EnumerateObject(LJsonValue);                      
-                      for x := 0 to Length(LEnumArray) - 1 do
-                      begin
-                        //get fieldname from json object
-                        sVal := LEnumArray[x].Key;
-                        LField := LDst.FindField(sVal);
-                        if Assigned(LField) then
-                        begin
-                          //check if not null
-                          if IsNull(LEnumArray[x].Value) then
-                            LField.Clear
-                          else
-                            LField.AsString := GetAsString(LEnumArray[x].Value);
-                        end;
-                      end;
-
-                      LDst.Post;
-                    except
-                      on E:Exception do
-                      begin
-                        PostError(E.Message);
-                      end;
-                    end;
-                  end;
-
-                finally
-                  LDst.EnableControls;
-                  FormatSettings := FOldFormatSettings;
-                end;
-                Exit;
-              end;   
-            end;
-          end
-          else
-          begin
-            //if AProp not assigned then we must create it
-            if AType.IsInstance then
-            begin
-              LObject := TSvRttiInfo.CreateType(AType.Handle);
-              if Assigned(LObject) then
-              begin
-                LValue := LObject;
-                bCreated := True;
-              end;
-            end;
-          end;
-
-          LEnumMethod := TSvRttiInfo.GetBasicMethod('Add', AType);
-          if Assigned(LEnumMethod) and ( (Assigned(AProp)) or not (LValue.IsEmpty)  ) then
-          begin
-            if LValue.IsEmpty and Assigned(AProp) then
-              LValue := TSvRttiInfo.GetValue(AProp, AObj);
-           // AValue := AProp.GetValue(AObj);
-
-            if (LValue.IsObject) and (LValue.AsObject = nil) then
-            begin
-              LValue := TSvRttiInfo.CreateType(AProp.PropertyType.Handle);
+              LValue := LObject;
               bCreated := True;
             end;
-
-            LClearMethod := TSvRttiInfo.GetBasicMethod('Clear', AType);
-            if Assigned(LClearMethod) and (Length(LClearMethod.GetParameters) = 0) then
-            begin
-              LClearMethod.Invoke(LValue, []);
-            end;
-
-            LParamsArray := LEnumMethod.GetParameters;
-
-            if Length(LParamsArray) > 1 then
-            begin
-              SetLength(arrVal, Length(LParamsArray));
-              //probably we are dealing with key value pair class like TDictionary    
-              for i := 0 to GetArraySize(LJsonArray) - 1 do
-              begin
-                LJsonValue := GetArrayElement(LJsonArray, i);                     
-
-              //  Assert(Length(LParamsArray) = GetObjectSize(LJsonValue), 'Parameters count differ');                
-                if IsObject(LJsonValue) then
-                begin
-                  LEnumArray := EnumerateObject(LJsonValue);
-                  for x := 0 to Length(LEnumArray) - 1 do
-                  begin
-                    arrVal[x] := SetValue(LEnumArray[x].Value,
-                      AObj, nil, LParamsArray[x].ParamType, ASkip);
-                  end;
-                end
-                else if IsArray(LJsonValue) then
-                begin
-                  for x := 0 to GetArraySize(LJsonValue) - 1 do
-                  begin
-                    arrVal[x] :=
-                      SetValue(GetArrayElement(LJsonValue, x), AObj, nil, LParamsArray[x].ParamType, ASkip);
-                  end;
-                end;
-
-                LEnumerator := LEnumMethod.Invoke(LValue, arrVal);
-              end;
-            end
-            else
-            begin
-              SetLength(arrVal, GetArraySize(LJsonArray));
-
-              for i := 0 to Length(arrVal)-1 do
-              begin
-                LJsonValue := GetArrayElement(LJsonArray, i);   
-                {TODO -oLinas -cGeneral : fix arguments}
-                //AParams[0].ParamType.AsInstance.
-                arrVal[i] := SetValue(LJsonValue, AObj, nil, LParamsArray[0].ParamType, ASkip);
-                LEnumerator := LEnumMethod.Invoke(LValue, [arrVal[i]]);
-              end;
-            end;
-
-            if bCreated then
-            begin
-              Result := LValue;
-              ASkip := False;
-              Exit;
-            end;
-            ASkip := True;
+          end;
+        end
+        else
+        begin
+          Result := TSvRttiInfo.GetValue(AProp, AObj);
+          if (Result.IsObject) and (Result.AsObject is TDataSet) then
+          begin
+            DeserializeDataset(AJsonArray, Result);
+            Exit;
           end;
         end;
+
+        if TryDeserializeContainer(AJsonArray, LValue, AType, bCreated, AProp, AObj, ASkip) then
+        begin
+          if bCreated then
+          begin
+            Result := LValue;
+            ASkip := False;
+            Exit;
+          end;
+        end;
+        ASkip := True;
       end
       else
       begin
         ASkip := True;
         PostError('Cannot assign array data to non array type');
-       // raise ESvSerializeException.Create('Cannot assign array data to non array type');
       end;
     end;
   end;
@@ -1599,60 +1492,40 @@ var
   i: Integer;
   LField: TRttiField ;
   LRecordType: TRttiRecordType ;
-  LCurrProp: TRttiProperty;
   LObject: TObject;
-  LJsonObject: T;
   LEnumerator: TArray<TEnumEntry<T>>;
 begin
   if Assigned(AType) then
   begin
-    LJsonObject := AJsonObject;
     case AType.TypeKind of
       tkRecord:
       begin
         TValue.MakeWithoutCopy(nil, AType.Handle, Result);
         LRecordType := TSvRttiInfo.GetType(AType.Handle).AsRecord;
 
-        LEnumerator := EnumerateObject(LJsonObject);
-        
+        LEnumerator := EnumerateObject(AJsonObject);
         for i := 0 to Length(LEnumerator) - 1 do
         begin
-          //search for property name             
+          //search for property name
           LField := FindRecordFieldName(LEnumerator[i].Key, LRecordType);
           if Assigned(LField) then
           begin
             {DONE -oLinas -cGeneral : fix arguments}
-            LField.SetValue(Result.GetReferenceToRawData,
+            LField.SetValue(GetRawPointer(Result),
               SetValue(LEnumerator[i].Value, AObj, nil, LField.FieldType, ASkip));
           end;
         end;
       end;
       tkClass:
       begin
-        //AType := TSvRttiInfo.GetType(AType.Handle);
-        if Assigned(AProp) and (AObj.AsObject <> nil) then
+        if Assigned(AProp) and ( (AObj.IsObject) and (AObj.AsObject <> nil)) then
         begin
           Result := TSvRttiInfo.GetValue(AProp, AObj);
           if (Result.IsObject) and (Result.AsObject = nil) then
           begin
             Result := TSvRttiInfo.CreateType(AType.Handle);
           end;
-
-          LEnumerator := EnumerateObject(LJsonObject);           
-          for i := 0 to Length(LEnumerator) - 1 do
-          begin
-            LCurrProp := AType.GetProperty(LEnumerator[i].Key);
-            if Assigned(LCurrProp) then
-            begin
-              if IsTransient(LCurrProp) then
-              begin
-                Continue;
-              end;    
-              LCurrProp.SetValue(GetRawPointer(Result), SetValue(LEnumerator[i].Value, Result {AObj}, LCurrProp,
-                LCurrProp.PropertyType, ASkip));
-            end;
-          end;
-         //  Result := AProp.GetValue(AObj);
+          SetClassProperties(Result, ASkip, AType, AJsonObject);
         end
         else
         begin
@@ -1661,20 +1534,7 @@ begin
           if Assigned(LObject) then
           begin
             Result := LObject;
-            LEnumerator := EnumerateObject(LJsonObject);   
-            for i := 0 to Length(LEnumerator) - 1 do
-            begin
-              LCurrProp := AType.GetProperty(LEnumerator[i].Key);
-              if Assigned(LCurrProp) then
-              begin
-                if IsTransient(LCurrProp) then
-                begin
-                  Continue;
-                end;
-                LCurrProp.SetValue(Result.AsObject, SetValue(LEnumerator[i].Value, Result, LCurrProp,
-                  LCurrProp.PropertyType, ASkip));
-              end;
-            end;
+            SetClassProperties(Result, ASkip, AType, AJsonObject);
           end;
         end;
       end
@@ -1683,7 +1543,7 @@ begin
         ASkip := True;
       end;
     end;
-  end;  
+  end;
 end;
 
 function TSvAbstractSerializer<T>.DoSetFromString(AJsonString: T; AType: TRttiType;
@@ -1892,6 +1752,69 @@ begin
     FErrors.Add(ErrorText);
 end;
 
+function TSvAbstractSerializer<T>.SerializeDataset(const ADataset: TValue): T;
+var
+  LDst: TDataSet;
+  iRecNo, i: Integer;
+  LJsonObject: T;
+begin
+  LDst := TDataSet(ADataset.AsObject);
+  Result := CreateArray;
+  LDst.DisableControls;
+  FormatSettings := FFormatSettings;
+  try
+    iRecNo := LDst.RecNo;
+    LDst.First;
+    while not LDst.Eof do
+    begin
+      LJsonObject := CreateObject;
+      for i := 0 to LDst.Fields.Count - 1 do
+      begin
+        if LDst.Fields[i].IsNull then
+        begin
+          ObjectAdd(LJsonObject, LDst.Fields[i].FieldName, CreateNull);
+        end
+        else
+        begin
+          ObjectAdd(LJsonObject, LDst.Fields[i].FieldName, CreateString(LDst.Fields[i].AsString));
+        end;
+      end;
+      ArrayAdd(Result, LJsonObject);
+      LDst.Next;
+    end;
+
+    LDst.RecNo := iRecNo;
+  finally
+    FormatSettings := FOldFormatSettings;
+    LDst.EnableControls;
+  end;
+end;
+
+function TSvAbstractSerializer<T>.SerializeEnumerable(const AEnumerable: TValue; AEnumMethod: TRttiMethod): T;
+var
+  LEnumerator: TValue;
+  LEnumType: TRttiType;
+  LMoveNextMethod: TRttiMethod;
+  LCurrentProp: TRttiProperty;
+begin
+  Result := CreateArray;
+  LEnumerator := AEnumMethod.Invoke(AEnumerable,[]);
+  LEnumType :=  TSvRttiInfo.GetType(LEnumerator.TypeInfo);
+  LMoveNextMethod := LEnumType.GetMethod('MoveNext');
+  LCurrentProp := LEnumType.GetProperty('Current');
+  Assert(Assigned(LMoveNextMethod), 'MoveNext method not found');
+  Assert(Assigned(LCurrentProp), 'Current property not found');
+  while LMoveNextMethod.Invoke(LEnumerator,[]).asBoolean do
+  begin
+    ArrayAdd(Result, GetValue(LCurrentProp.GetValue(GetRawPointer(LEnumerator)), LCurrentProp));
+  end;
+
+  if LEnumerator.IsObject then
+  begin
+    LEnumerator.AsObject.Free;
+  end;
+end;
+
 procedure TSvAbstractSerializer<T>.SerializeObject(const AKey: string; const obj: TValue;
   AStream: TStream; ACustomProps: TStringDynArray);
 var
@@ -1966,6 +1889,29 @@ begin
   end;
 end;
 
+procedure TSvAbstractSerializer<T>.SetClassProperties(var AValue: TValue; var ASkip: Boolean;
+  AType: TRttiType; AObjectToEnumerate: T);
+var
+  i: Integer;
+  LCurrProp: TRttiProperty;
+  LEnumerator: TArray<TEnumEntry<T>>;
+begin
+  LEnumerator := EnumerateObject(AObjectToEnumerate);
+  for i := 0 to Length(LEnumerator) - 1 do
+  begin
+    LCurrProp := AType.GetProperty(LEnumerator[i].Key);
+    if Assigned(LCurrProp) then
+    begin
+      if IsTransient(LCurrProp) then
+      begin
+        Continue;
+      end;
+      LCurrProp.SetValue(GetRawPointer(AValue), SetValue(LEnumerator[i].Value, AValue, LCurrProp,
+        LCurrProp.PropertyType, ASkip));
+    end;
+  end;
+end;
+
 procedure TSvAbstractSerializer<T>.SetRootObj(const Value: T);
 begin
   FRootObj := Value;
@@ -2013,6 +1959,96 @@ begin
       Skip := True;
       PostError('Unsupported value type: ' + GetTypeName( System.TypeInfo(T)));
     end;
+  end;
+end;
+
+function TSvAbstractSerializer<T>.TryDeserializeContainer(AArray: T; var AValue: TValue;
+  AType: TRttiType; var ACreated: Boolean; AProp: TRttiProperty; const AObj: TValue; var ASkip: Boolean): Boolean;
+var
+  LEnumMethod, LClearMethod: TRttiMethod;
+  LParamsArray: TArray<TRttiParameter>;
+  arrVal: array of TValue;
+  LJsonValue: T;
+  LEnumArray: TArray<TEnumEntry<T>>;
+  i, x: Integer;
+  LEnumerator: TValue;
+begin
+  Result := False;
+  LEnumMethod := TSvRttiInfo.GetBasicMethod('Add', AType);
+  if Assigned(LEnumMethod) and ( (Assigned(AProp)) or not (AValue.IsEmpty)  ) then
+  begin
+
+    if AValue.IsEmpty and Assigned(AProp) then
+      AValue := TSvRttiInfo.GetValue(AProp, AObj);
+   // AValue := AProp.GetValue(AObj);
+
+    if (AValue.IsObject) and (AValue.AsObject = nil) then
+    begin
+      AValue := TSvRttiInfo.CreateType(AProp.PropertyType.Handle);
+      ACreated := True;
+    end;
+
+    LClearMethod := TSvRttiInfo.GetBasicMethod('Clear', AType);
+    if Assigned(LClearMethod) and (Length(LClearMethod.GetParameters) = 0) then
+    begin
+      LClearMethod.Invoke(AValue, []);
+    end;
+
+    LParamsArray := LEnumMethod.GetParameters;
+
+    if Length(LParamsArray) > 1 then
+    begin
+      SetLength(arrVal, Length(LParamsArray));
+      //probably we are dealing with key value pair class like TDictionary
+      for i := 0 to GetArraySize(AArray) - 1 do
+      begin
+        LJsonValue := GetArrayElement(AArray, i);
+
+      //  Assert(Length(LParamsArray) = GetObjectSize(LJsonValue), 'Parameters count differ');
+        if IsObject(LJsonValue) then
+        begin
+          LEnumArray := EnumerateObject(LJsonValue);
+          for x := 0 to Length(LEnumArray) - 1 do
+          begin
+            arrVal[x] := SetValue(LEnumArray[x].Value,
+              AObj, nil, LParamsArray[x].ParamType, ASkip);
+          end;
+        end
+        else if IsArray(LJsonValue) then
+        begin
+          for x := 0 to GetArraySize(LJsonValue) - 1 do
+          begin
+            arrVal[x] :=
+              SetValue(GetArrayElement(LJsonValue, x), AObj, nil, LParamsArray[x].ParamType, ASkip);
+          end;
+        end;
+
+        LEnumerator := LEnumMethod.Invoke(AValue, arrVal);
+      end;
+    end
+    else
+    begin
+      SetLength(arrVal, GetArraySize(AArray));
+
+      for i := 0 to Length(arrVal)-1 do
+      begin
+        LJsonValue := GetArrayElement(AArray, i);
+        {TODO -oLinas -cGeneral : fix arguments}
+        //AParams[0].ParamType.AsInstance.
+        arrVal[i] := SetValue(LJsonValue, AObj, nil, LParamsArray[0].ParamType, ASkip);
+        LEnumerator := LEnumMethod.Invoke(AValue, [arrVal[i]]);
+      end;
+    end;
+
+    Result := True;
+
+    {if ACreated then
+    begin
+      Result := AValue;
+      ASkip := False;
+      Exit;
+    end;
+    ASkip := True;  }
   end;
 end;
 
