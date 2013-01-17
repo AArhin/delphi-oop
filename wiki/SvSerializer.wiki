@@ -45,6 +45,27 @@ end;
 
 }}}
 
+ * You can also do this using class methods:
+{{{
+var
+  LFoobar: TFoobar;
+  LJsonString, LXMLString: string;
+begin
+  LFoobar := TFoobar.Create;
+  try
+    LFoobar.Foo := 'Foo';
+    LFoobar.Bar := 'Bar';
+    LFoobar.Skip := True;
+    //serialize to json string
+    TSvSerializer.SerializeObject(LFoobar, LJsonString, sstSuperJson);
+    //serialize to xml string
+    TSvSerializer.SerializeObject(LFoobar, LXMLString, sstNativeXML);
+  finally
+    LFoobar.Free;
+  end;
+end;
+}}}
+
  * Deserialization is also very simple:
 
 {{{
@@ -58,6 +79,23 @@ begin
   LJsonString := '{"Foo": "Foo", "Bar": "Bar"}';  
   LFoobar := TFoobar.FromJsonString(LJsonString);
   try
+    CheckEqualsString('Foo', LFooBar.Foo);
+  finally
+    LFoobar.Free;
+  end;
+end;
+}}}
+
+ * Same example but using class methods:
+{{{
+var
+  LFoobar: TFoobar;
+  LJsonString: string;
+begin
+  LJsonString := '{"Foo": "Foo", "Bar": "Bar"}';  
+  LFoobar := TFoobar.Create;
+  try
+    TSvSerializer.DeserializeObject(LFoobar, LJsonString, sstSuperJson);
     CheckEqualsString('Foo', LFooBar.Foo);
   finally
     LFoobar.Free;
