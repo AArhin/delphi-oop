@@ -410,6 +410,7 @@ uses
   DateUtils,
   TypInfo,
   Diagnostics,
+  SvSerializerRtti,
   SvSerializer.Extensions.SQLite;
 
 const
