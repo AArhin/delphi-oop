@@ -240,9 +240,56 @@ type
 
   {$REGION 'Documentation'}
   ///	<summary>
-  ///	  Serializer class which can serialize almost any type to a file or a
-  ///	  stream
+  ///	  <c>TSvSerializer</c> class which can serialize almost any type to a
+  ///	  filename, <c>string</c> or a <c>TStream</c>.
   ///	</summary>
+  ///	<remarks>
+  ///	  In order to use custom serialization formats, they must be registered.
+  ///	  This could be done by adding their units to the project uses. Some
+  ///	  serialization formats requires additional libraries. They can be
+  ///	  located in project's <i>Externals</i> directory. E.g. if your project
+  ///	  wants to use <c>sstSuperJson</c> or <c>sstNativeXML</c>, then
+  ///	  <c>superobject</c> and <c>NativeXML</c> sources must be added to
+  ///	  project's search paths. Also  <c>SvSerializerSuperJson </c>and
+  ///	  <c>SvSerializerNativeXML </c>units must be added somewhere in your
+  ///	  projects uses.
+  ///	</remarks>
+  ///	<example>
+  ///	  <code lang="Delphi">
+  ///	var
+  ///	  LFoobar: TFoobar;
+  ///	  LJsonString, LXMLString: string;
+  ///	begin
+  ///	  LFoobar := TFoobar.Create;
+  ///	  try
+  ///	    LFoobar.Foo := 'Foo';
+  ///	    LFoobar.Bar := 'Bar';
+  ///	    LFoobar.Skip := True;
+  ///	    //serialize to json string
+  ///	    TSvSerializer.SerializeObject(LFoobar, LJsonString, sstSuperJson);
+  ///	    //serialize to xml string
+  ///	    TSvSerializer.SerializeObject(LFoobar, LXMLString, sstNativeXML);
+  ///	  finally
+  ///	    LFoobar.Free;
+  ///	  end; end;</code>
+  ///	  <code lang="Delphi">
+  ///	var
+  ///	  LFoobar: TFoobar;
+  ///	  LJsonString: string;
+  ///	begin
+  ///	  LJsonString := '{"Foo": "Foo", "Bar": "Bar"}';
+  ///	  LFoobar := TFoobar.Create;
+  ///	  try
+  ///	    TSvSerializer.DeserializeObject(LFoobar, LJsonString, sstSuperJson);
+  ///	    CheckEqualsString('Foo', LFooBar.Foo);
+  ///	  finally
+  ///	    LFoobar.Free;
+  ///	  end;
+  ///	end;</code>
+  ///	</example>
+  ///	<seealso href="https://code.google.com/p/delphi-oop/wiki/SvSerializer">
+  ///	  Wiki
+  ///	</seealso>
   {$ENDREGION}
   TSvSerializer = class
   private
