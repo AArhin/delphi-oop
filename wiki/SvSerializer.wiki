@@ -93,4 +93,4 @@ type
 
  * You need to register serializers in order to use them. You can do this by adding their units to your project (e.g. {{{ uses SvSerializerSuperJson, SvSerializerNativeXML, SvSerializerJson}}}).
  * Serializer saves only _properties_ which are not marked with {{{[SvTransient]}}} attribute. You can add {{{[SvSerialize('PropertyName')]}}} attribute if you want to set property name for serialization.
- * Supported types: all basic types, TObject descendants with no argument constructors, Enumerable types ({{{TList, TObjectList, TArray, TList<T>, TDictionary<T>}}} etc.), Records, TDataset descendants, Enumerators, Sets, etc. 
+ * Supported types: all basic types, TObject descendants with no argument constructors, Enumerable types ({{{TList, TObjectList, TArray, TList<T>, TDictionary<T>}}} etc.), enumerable interfaces (e.g. from [https://code.google.com/p/delphi-spring-framework/ Delphi Spring Framework] - {{{IList<T>, ICollection<T>, etc.}}})  Records, TDataset descendants, Enumerators, Sets, etc. 
