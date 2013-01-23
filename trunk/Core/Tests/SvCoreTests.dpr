@@ -56,6 +56,7 @@ begin
     with TextTestRunner.RunRegisteredTests do
       Free
   else
-    GUITestRunner.RunRegisteredTests;
+    TSvGUITestRunner.RunRegisteredTests;
+   // GUITestRunner.RunRegisteredTests;
 end.
 
