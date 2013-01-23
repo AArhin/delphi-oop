@@ -98,7 +98,10 @@ end;
 procedure TSvSuperJsonSerializer.BeginDeSerialization(AStream: TStream);
 begin
   inherited;
-  RootObject := TSuperObject.ParseStream(AStream, False);
+  if AStream is TStringStream then
+    RootObject := TSuperObject.ParseString(PWideChar(TStringStream(AStream).DataString), False)
+  else
+    RootObject := TSuperObject.ParseStream(AStream, False);
 end;
 
 procedure TSvSuperJsonSerializer.BeginSerialization;
