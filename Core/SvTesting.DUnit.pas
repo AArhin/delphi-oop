@@ -240,13 +240,13 @@ var
   aTest: ITest;
   LNode: TTreeNode;
 
-  function ProcessNode(ANode: TTreeNode): TTreeNode;
+  procedure ProcessNode(ANode: TTreeNode);
   begin
     while Assigned(ANode) do
     begin
       if ANode.HasChildren then
       begin
-        Result := ProcessNode(ANode.getFirstChild);
+        ProcessNode(ANode.getFirstChild);
       end;
 
       aTest := NodeToTest(ANode);
@@ -254,7 +254,6 @@ var
         FSelectedTests.Add(aTest as ITest);
 
       ANode := ANode.getNextSibling;
-      Result := ANode;
     end;
   end;
 
