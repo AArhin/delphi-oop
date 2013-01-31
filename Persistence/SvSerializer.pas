@@ -45,6 +45,12 @@ type
 
   TSvSerializer = class;
 
+  {$REGION 'Documentation'}
+  ///	<summary>
+  ///	  Properties marked this this attribute are serialized using specified
+  ///	  name.
+  ///	</summary>
+  {$ENDREGION}
   SvSerialize = class(TCustomAttribute)
   private
     FName: string;
@@ -225,8 +231,6 @@ type
 
     class function GetAttribute(AProp: TRttiProperty): SvSerialize;
     class function TryGetAttribute(AProp: TRttiProperty; out AAtribute: SvSerialize): Boolean;
-    
-    class function GetPropertyByName(const APropName: string; ARttiType: TRttiType): TRttiProperty;
 
     {$REGION 'Documentation'}
     ///	<summary>
@@ -385,6 +389,19 @@ type
     property SerializeFormat: TSvSerializeFormat read FSerializeFormat write SetSerializeFormat;
   end;
 
+  {$REGION 'Documentation'}
+  ///	<summary>
+  ///	  Represents class helper for <c>TObject</c> class which extends
+  ///	  <c>TObject</c> with serialization capabilities.
+  ///	</summary>
+  ///	<remarks>
+  ///	  Note that because this helper extends base <c>TObject</c> class, 
+  ///	  constructor methods (<c>FromJsonString</c>, <c>FromXmlString</c>) will
+  ///	  not call inherited constructors. E.g. if you have class <c>TCustomer</c>
+  ///	   which initializes some values in it's constructor then it won't be
+  ///	  called.
+  ///	</remarks>
+  {$ENDREGION}
   TSvObjectHelper = class helper for TObject
   public
     function ToSerializedString(ASerializerFormat: TSvSerializeFormat): string;
@@ -463,7 +480,6 @@ begin
         begin
           LStrings.Add(LCurrProp.Name);
         end;
-
       end;
 
       SetLength(LArray, LStrings.Count);
@@ -477,7 +493,6 @@ begin
     finally
       LStrings.Free;
     end;
-
   end;
 end;
 
@@ -519,7 +534,6 @@ end;
 
 procedure TSvSerializer.DeSerialize(AFromStream: TStream);
 begin
-  {DONE -oLinas -cGeneral : deserialize from stream}
   DoDeSerialize(AFromStream);
 end;
 
@@ -613,7 +627,6 @@ begin
     begin
       LSerializer.SerializeObject(LPair.Key, LPair.Value.Key, AStream, LPair.Value.Value);
     end;
-
   finally
     LSerializer.EndSerialization;
   end;
@@ -630,7 +643,6 @@ begin
       Exit(SvSerialize(LAttr));
     end;
   end;
-
   Result := nil;
 end;
 
@@ -670,20 +682,6 @@ begin
     Result := nil;
 end;
 
-class function TSvSerializer.GetPropertyByName(const APropName: string; ARttiType: TRttiType): TRttiProperty;
-var
-  LProp: TRttiProperty;
-begin
-  for LProp in ARttiType.GetProperties do
-  begin
-    if SameText(APropName, LProp.Name) then
-    begin
-      Exit(LProp);
-    end;
-  end;
-  Result := nil;
-end;
-
 procedure TSvSerializer.Marshall<T>(const AWhat: T; var AToString: string;
   const AEncoding: TEncoding);
 var
@@ -693,7 +691,6 @@ begin
   ss := TStringStream.Create('', AEncoding);
   try
     Marshall(AWhat, ss);
-
     AToString := ss.DataString;
   finally
     ss.Free;
@@ -716,7 +713,6 @@ begin
   end;
 end;
 
-
 procedure TSvSerializer.Marshall<T>(const AWhat: T; const AToFilename: string);
 var
   fs: TFileStream;
@@ -728,7 +724,6 @@ begin
     fs.Free;
   end;
 end;
-
 
 procedure TSvSerializer.RemoveObject(const AObj: TObject);
 var
@@ -769,7 +764,6 @@ end;
 
 procedure TSvSerializer.Serialize(AToStream: TStream);
 begin
-  {DONE -oLinas -cGeneral : serialize to stream}
   DoSerialize(AToStream);
 end;
 
@@ -781,7 +775,6 @@ begin
   ss := TStringStream.Create('', AEncoding);
   try
     Serialize(ss);
-
     AToString := ss.DataString;
   finally
     ss.Free;
@@ -834,8 +827,6 @@ begin
     FSerializeFormat := Value;
   end;
 end;
-
-
 
 class function TSvSerializer.TryGetAttribute(AProp: TRttiProperty;
   out AAtribute: SvSerialize): Boolean;
