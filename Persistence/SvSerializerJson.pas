@@ -264,8 +264,13 @@ begin
 end;
 
 function TSvJsonSerializer.GetValueByName(const AName: string; AObject: TJSONValue): TJSONValue;
+var
+  LPair: TJSONPair;
 begin
-  Result := (AObject as TJSONObject).Get(AName).JsonValue;
+  Result := nil;
+  LPair := (AObject as TJSONObject).Get(AName);
+  if Assigned(LPair) then
+    Result := LPair.JsonValue;
 end;
 
 function TSvJsonSerializer.IsArray(AValue: TJSONValue): Boolean;
