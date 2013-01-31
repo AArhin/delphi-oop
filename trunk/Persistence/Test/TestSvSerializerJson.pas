@@ -43,6 +43,13 @@ type
     property Name: string read FName write FName;
   end;
 
+  TSurName = class(TName)
+  private
+    FSurName: string;
+  public
+    property SurName: string read FSurName write FSurName;
+  end;
+
   TRegisterConstructor = class
   private
     FItems: TObjectList<TName>;
@@ -389,6 +396,7 @@ type
     procedure TestRegisteredConstructor();
     procedure TestInterfaceList();
     procedure Test_ClassMethods();
+    procedure TestNewPropertyAdded();
   end;
 
   TestTSvSuperJsonSerializer = class(TestTSvJsonSerializerFactory)
@@ -763,6 +771,29 @@ begin
     CheckEquals(10, obj.InvData.RecordCount);
   finally
     obj.Free;
+  end;
+end;
+
+procedure TestTSvJsonSerializerFactory.TestNewPropertyAdded;
+var
+  LName: TName;
+  LSurname: TSurName;
+  LOutput: string;
+begin
+  LName := TName.Create('Bob');
+  LSurname := TSurName.Create('John');
+  try
+    LSurname.SurName := 'Marley';
+    LOutput := '';
+    TSvSerializer.SerializeObject(LName, LOutput, SerializerType);
+    CheckTrue(LOutput <> '');
+
+    TSvSerializer.DeSerializeObject(LSurname, LOutput, SerializerType);
+    CheckEquals('Bob', LSurname.Name);
+    CheckEquals('Marley', LSurname.SurName);
+  finally
+    LName.Free;
+    LSurname.Free;
   end;
 end;
 
