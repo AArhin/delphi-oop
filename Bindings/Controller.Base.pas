@@ -135,8 +135,8 @@ begin
   FModel := AModel;
   FView := AView;
   InjectViewProperties();
-  TDataBindManager.BindView(Self, AModel);
   Initialize();
+  TDataBindManager.BindView(Self, AModel);
 end;
 
 destructor TBaseController<TModel>.Destroy;
