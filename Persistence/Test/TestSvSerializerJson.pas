@@ -397,6 +397,7 @@ type
     procedure TestInterfaceList();
     procedure Test_ClassMethods();
     procedure TestNewPropertyAdded();
+    procedure SerializeListOnly();
   end;
 
   TestTSvSuperJsonSerializer = class(TestTSvJsonSerializerFactory)
@@ -490,6 +491,32 @@ end;
 procedure TDemoObj.SetName(const Value: string);
 begin
   FName := Value;
+end;
+
+procedure TestTSvJsonSerializerFactory.SerializeListOnly;
+var
+  LList: TObjectList<TDummy>;
+  LOutput: string;
+begin
+  LList := TObjectList<TDummy>.Create(True);
+  try
+    LList.Add(TDummy.Create('Foobar'));
+
+    FSerializer.AddObject('', LList);
+    LOutput := '';
+    FSerializer.Serialize(LOutput, TEncoding.UTF8);
+    CheckTrue(LOutput <> '');
+
+    LList.Free;
+    LList := TObjectList<TDummy>.Create(True);
+    FSerializer.RemoveObject('');
+    FSerializer.AddObject('', LList);
+    FSerializer.DeSerialize(LOutput, TEncoding.UTF8);
+    CheckEquals(1, LList.Count);
+    CheckEquals('Foobar', LList[0].Dummy);
+  finally
+    LList.Free;
+  end;
 end;
 
 procedure TestTSvJsonSerializerFactory.SetUp;

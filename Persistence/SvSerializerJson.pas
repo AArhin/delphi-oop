@@ -125,7 +125,7 @@ begin
       begin
         LJsonVal := TJSONObject.ParseJSONValue(LBytes.Bytes, 0, LBytes.Size, True);
 
-        if Assigned(LJsonVal) and (LJsonVal is TJSONObject) then
+        if Assigned(LJsonVal) and ( (LJsonVal is TJSONObject) or (LJsonVal is TJSONArray)) then
         begin
           RootObject := LJsonVal;
         end;
@@ -152,7 +152,8 @@ end;
 procedure TSvJsonSerializer.BeginSerialization;
 begin
   inherited;
-  RootObject := TJSONObject.Create;
+  RootObject := nil;
+  //RootObject := TJSONObject.Create;
 end;
 
 constructor TSvJsonSerializer.Create(AOwner: TSvSerializer);
