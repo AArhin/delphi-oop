@@ -96,6 +96,7 @@ type
     function GetValueByName(const AName: string; AObject: T): T; virtual; abstract;
     function EnumerateObject(AObject: T): TArray<TEnumEntry<T>>; virtual; abstract;
     //setters
+    function CreateRootObject(AType: TRttiType): T; virtual;
     function CreateObject(): T; virtual; abstract;
     function CreateArray(): T; virtual; abstract;
     function CreateBoolean(AValue: Boolean): T; virtual; abstract;
@@ -196,6 +197,15 @@ begin
   FOldFormatSettings := FormatSettings;
 end;
 
+function TSvAbstractSerializer<T>.CreateRootObject(AType: TRttiType): T;
+var
+  LEnumMethod: TRttiMethod;
+begin
+  Result := System.Default(T);
+  if not IsTypeEnumerable(AType, LEnumMethod) then
+    Result := CreateObject;
+end;
+
 function TSvAbstractSerializer<T>.DeserializeDataset(AArray: T; var AValue: TValue): Boolean;
 var
   LDst: TDataSet;
@@ -261,6 +271,7 @@ var
   I: Integer;
   LSkip: Boolean;
   LField: TRttiField;
+  LEnumMethod: TRttiMethod;
   LAttrib: SvSerialize;
 begin
   inherited;
@@ -313,6 +324,10 @@ begin
                 TSvRttiInfo.SetValue(LField, obj, LValue);
             end;
           end;
+        end
+        else if (IsTypeEnumerable(LType, LEnumMethod)) then
+        begin
+          TryDeserializeContainer(RootObject, obj, LType, LSkip, nil, obj, LSkip);
         end
         else
         begin
@@ -923,11 +938,14 @@ var
   I: Integer;
   LField: TRttiField;
   LAttrib: SvSerialize;
+  LEnumMethod: TRttiMethod;
 begin
   if not obj.IsEmpty and (Assigned(AStream)) then
   begin
     FStream := AStream;
     LType := TSvRttiInfo.GetType(obj);
+    RootObject := CreateRootObject(LType);
+
     //create main object
     if AKey = '' then
     begin
@@ -962,6 +980,10 @@ begin
           LPropName := LField.Name;
           ObjectAdd(LObject, LPropName, GetValue(LValue, TRttiProperty(LField)));
         end;
+      end
+      else if IsTypeEnumerable(LType, LEnumMethod) then
+      begin
+        RootObject := GetValue(obj, nil);
       end
       else
       begin

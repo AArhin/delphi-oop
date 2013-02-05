@@ -107,7 +107,8 @@ end;
 procedure TSvSuperJsonSerializer.BeginSerialization;
 begin
   inherited;
-  RootObject := SO();
+  RootObject := nil;
+  //RootObject := SO();
 end;
 
 constructor TSvSuperJsonSerializer.Create(AOwner: TSvSerializer);
