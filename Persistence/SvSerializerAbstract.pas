@@ -953,6 +953,8 @@ begin
     end
     else
     begin
+      if not IsAssigned(RootObject) then
+        RootObject := CreateObject();
       LObject := CreateObject;
       ObjectAdd(RootObject, GetObjectUniqueName(AKey, obj), LObject);
     end;
