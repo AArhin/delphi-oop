@@ -303,7 +303,7 @@ begin
             if IsAssigned(LPair) then
             begin
               LValue := SetValue(LPair, obj, LProp, LProp.PropertyType, LSkip);
-              if not LSkip then
+              if not LSkip and LProp.IsWritable  then
                 TSvRttiInfo.SetValue(LProp, obj, LValue);
             end;
           end;
@@ -944,7 +944,9 @@ begin
   begin
     FStream := AStream;
     LType := TSvRttiInfo.GetType(obj);
-    RootObject := CreateRootObject(LType);
+
+    if not IsAssigned(RootObject) then
+      RootObject := CreateRootObject(LType);
 
     //create main object
     if AKey = '' then
@@ -1023,10 +1025,11 @@ begin
     LCurrProp := AType.GetProperty(LEnumerator[i].Key);
     if Assigned(LCurrProp) then
     begin
-      if IsTransient(LCurrProp) then
+      if IsTransient(LCurrProp) or (not LCurrProp.IsWritable) then
       begin
         Continue;
       end;
+
       LCurrProp.SetValue(GetRawPointer(AValue), SetValue(LEnumerator[i].Value, AValue, LCurrProp,
         LCurrProp.PropertyType, ASkip));
     end;
