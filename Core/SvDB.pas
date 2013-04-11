@@ -369,7 +369,6 @@ begin
       LBuilder.AppendFormat('(%0:S)', [FOwner.FHavingCriterias[i]]);
     end;
 
-
     if FOwner.FOrderByCriterias.Count > 0 then
     begin
       LBuilder.AppendLine.Append(' ORDER BY ' + FOwner.FOrderByCriterias.DelimitedText);
@@ -379,7 +378,6 @@ begin
     begin
       LBuilder.AppendLine.Append(FOwner.FUnions[i].ToString);
     end;
-
 
     Result := LBuilder.ToString;
   finally
