@@ -83,7 +83,7 @@ begin
     .From('dbo.Customers C')
     .Join('dbo.Details D on D.ID=C.ID')
     .Column('C.FIRSTNAME').Column('C.LASTNAME')
-    .Union('SELECT NULL, NULL')
+  .Union('SELECT NULL, NULL')
   .ToString;
   CheckEquals('SELECT C.FIRSTNAME,C.LASTNAME'+ #13#10 + ' FROM dbo.Customers C'+ #13#10 +' JOIN dbo.Details D on D.ID=C.ID'+ #13#10 +
     'UNION' + #13#10 +
