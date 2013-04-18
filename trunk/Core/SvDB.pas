@@ -335,7 +335,16 @@ begin
     if FOwner.FTop.FEnabled then
       FOwner.AppendTop(LBuilder);
 
-    LBuilder.Append(Owner.FColumns.DelimitedText);
+
+    for i := 0 to Owner.FColumns.Count - 1 do
+    begin
+      if i = 0 then
+        LBuilder.AppendLine
+      else
+        LBuilder.Append(',');
+
+      LBuilder.Append(Owner.FColumns[i]);
+    end;
 
     LBuilder.AppendLine.Append(' FROM ' + Owner.FTable.ToString);
 
@@ -354,9 +363,15 @@ begin
       LBuilder.Append('(' + FOwner.FWhereCriterias[i] + ')');
     end;
 
-    if FOwner.FGroupByCriterias.Count > 0 then
+
+    for i := 0 to Owner.FGroupByCriterias.Count - 1 do
     begin
-      LBuilder.AppendLine.Append(' GROUP BY ' + FOwner.FGroupByCriterias.DelimitedText);
+      if i = 0 then
+        LBuilder.AppendLine.Append(' GROUP BY ')
+      else
+        LBuilder.Append(',');
+
+      LBuilder.Append(Owner.FGroupByCriterias[i]);
     end;
 
     for i := 0 to FOwner.FHavingCriterias.Count - 1 do
@@ -369,9 +384,15 @@ begin
       LBuilder.AppendFormat('(%0:S)', [FOwner.FHavingCriterias[i]]);
     end;
 
-    if FOwner.FOrderByCriterias.Count > 0 then
+
+    for i := 0 to Owner.FOrderByCriterias.Count - 1 do
     begin
-      LBuilder.AppendLine.Append(' ORDER BY ' + FOwner.FOrderByCriterias.DelimitedText);
+      if i = 0 then
+        LBuilder.AppendLine.Append(' ORDER BY ')
+      else
+        LBuilder.Append(',');
+
+      LBuilder.Append(Owner.FOrderByCriterias[i]);
     end;
 
     for i := 0 to FOwner.FUnions.Count - 1 do
