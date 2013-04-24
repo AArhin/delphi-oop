@@ -16,6 +16,8 @@ type
   published
     procedure Select();
     procedure Select_Union();
+    procedure Delete_From_Where();
+    procedure Delete_From();
   end;
 
   TSvTransactSQLBuilderTests = class(TTestCase)
@@ -33,6 +35,29 @@ implementation
 
 { TSvSQLBuilderTests }
 
+procedure TSvAnsiSQLBuilderTests.Delete_From;
+var
+  LSQL: string;
+begin
+  LSQL := FSQLBuilder.Delete
+    .From('dbo.Customers c')
+    .ToString();
+
+  CheckEquals('DELETE FROM dbo.Customers c', LSQL);
+end;
+
+procedure TSvAnsiSQLBuilderTests.Delete_From_Where;
+var
+  LSQL: string;
+begin
+  LSQL := FSQLBuilder.Delete
+    .From('dbo.Customers c')
+    .Where('c.AGE < 18')
+    .ToString();
+
+  CheckEquals('DELETE FROM dbo.Customers c'+ #13#10 + ' WHERE (c.AGE < 18)', LSQL);
+end;
+
 procedure TSvAnsiSQLBuilderTests.Select;
 var
   LSQL, LPreviousSQL: string;
@@ -46,20 +71,20 @@ begin
   LSQL := FSQLBuilder
     .From('dbo.Customers C')
     .Join('dbo.Details D on D.ID=C.ID').ToString;
-  CheckEquals('SELECT C.FIRSTNAME,C.LASTNAME'+ #13#10 + ' FROM dbo.Customers C'+ #13#10 +' JOIN dbo.Details D on D.ID=C.ID', LSQL);
+  CheckEquals('SELECT '+ #13#10 +'C.FIRSTNAME,C.LASTNAME'+ #13#10 + ' FROM dbo.Customers C'+ #13#10 +' JOIN dbo.Details D on D.ID=C.ID', LSQL);
 
   LSQL := FSQLBuilder
     .Where('C.CUSTNAME = ''Foobar''')
     .Where('D.CUSTORDER = 1')
     .ToString;
-  CheckEquals('SELECT C.FIRSTNAME,C.LASTNAME'+ #13#10 + ' FROM dbo.Customers C'+ #13#10 +' JOIN dbo.Details D on D.ID=C.ID'+#13#10+
+  CheckEquals('SELECT '+ #13#10 +'C.FIRSTNAME,C.LASTNAME'+ #13#10 + ' FROM dbo.Customers C'+ #13#10 +' JOIN dbo.Details D on D.ID=C.ID'+#13#10+
     ' WHERE (C.CUSTNAME = ''Foobar'') AND (D.CUSTORDER = 1)', LSQL);
 
   LSQL := FSQLBuilder.Select.Column('SUM(D.CUSTCOUNT)')
     .GroupBy('C.FIRSTNAME')
     .GroupBy('C.LASTNAME')
     .ToString;
-  CheckEquals('SELECT C.FIRSTNAME,C.LASTNAME,SUM(D.CUSTCOUNT)'+ #13#10 + ' FROM dbo.Customers C'+ #13#10 +' JOIN dbo.Details D on D.ID=C.ID'+#13#10+
+  CheckEquals('SELECT '+ #13#10 +'C.FIRSTNAME,C.LASTNAME,SUM(D.CUSTCOUNT)'+ #13#10 + ' FROM dbo.Customers C'+ #13#10 +' JOIN dbo.Details D on D.ID=C.ID'+#13#10+
     ' WHERE (C.CUSTNAME = ''Foobar'') AND (D.CUSTORDER = 1)'+ #13#10+
     ' GROUP BY C.FIRSTNAME,C.LASTNAME', LSQL);
   LPreviousSQL := LSQL;
@@ -83,11 +108,11 @@ begin
     .From('dbo.Customers C')
     .Join('dbo.Details D on D.ID=C.ID')
     .Column('C.FIRSTNAME').Column('C.LASTNAME')
-  .Union('SELECT NULL, NULL')
+  .Union('SELECT '+ #13#10 +'NULL, NULL')
   .ToString;
-  CheckEquals('SELECT C.FIRSTNAME,C.LASTNAME'+ #13#10 + ' FROM dbo.Customers C'+ #13#10 +' JOIN dbo.Details D on D.ID=C.ID'+ #13#10 +
+  CheckEquals('SELECT '+ #13#10 +'C.FIRSTNAME,C.LASTNAME'+ #13#10 + ' FROM dbo.Customers C'+ #13#10 +' JOIN dbo.Details D on D.ID=C.ID'+ #13#10 +
     'UNION' + #13#10 +
-    'SELECT NULL, NULL', LSQL);
+    'SELECT '+ #13#10 +'NULL, NULL', LSQL);
 end;
 
 procedure TSvAnsiSQLBuilderTests.SetUp;
