@@ -13,6 +13,7 @@ type
     function ToString(): string;
 
     function Select(): ISQLBuilder;
+    function Delete(): ISQLBuilder;
     function Column(const AColumnName: string): ISQLBuilder;
     function From(const ATableName: string): ISQLBuilder;
     function Join(const AJoinCriteria: string): ISQLBuilder;
@@ -68,6 +69,8 @@ type
   TSQLStatement = class
   private
     FOwner: TAnsiSQLBuilder;
+  protected
+    procedure GenerateWhereClause(ABuilder: TStringBuilder); virtual;
   public
     constructor Create(AOwner: TAnsiSQLBuilder); virtual;
 
@@ -77,6 +80,11 @@ type
   end;
 
   TSelectStatement = class(TSQLStatement)
+  public
+    function ToString(): string; override;
+  end;
+
+  TDeleteStatement = class(TSQLStatement)
   public
     function ToString(): string; override;
   end;
@@ -104,6 +112,7 @@ type
     function ToString(): string; override;
 
     function Select(): ISQLBuilder; virtual;
+    function Delete(): ISQLBuilder; virtual;
     function Column(const AColumnName: string): ISQLBuilder; virtual;
     function From(const ATableName: string): ISQLBuilder; virtual;
     function Join(const AJoinCriteria: string): ISQLBuilder; virtual;
@@ -179,6 +188,12 @@ begin
   FOrderByCriterias.StrictDelimiter := True;
   FTop := TSQLTop.Create;
   FUnions := TObjectList<TSQLUnion>.Create(True);
+end;
+
+function TAnsiSQLBuilder.Delete: ISQLBuilder;
+begin
+  FSQLStmtType := stDelete;
+  Result := Self;
 end;
 
 destructor TAnsiSQLBuilder.Destroy;
@@ -261,12 +276,12 @@ var
   LStatement: TSQLStatement;
 begin
   Result := '';
-
+  LStatement := nil;
   case FSQLStmtType of
     stSelect: LStatement := TSelectStatement.Create(Self);
     stInsert: raise EAnsiSQLBuilderException.Create('Insert Not implemented');
     stUpdate: raise EAnsiSQLBuilderException.Create('Update Not implemented');
-    stDelete: raise EAnsiSQLBuilderException.Create('Delete Not implemented');
+    stDelete: LStatement := TDeleteStatement.Create(Self);
   end;
 
   try
@@ -312,6 +327,21 @@ begin
   FOwner := AOwner;
 end;
 
+procedure TSQLStatement.GenerateWhereClause(ABuilder: TStringBuilder);
+var
+  i: Integer;
+begin
+  for i := 0 to FOwner.FWhereCriterias.Count - 1 do
+  begin
+    if i = 0 then
+      ABuilder.AppendLine.Append(' WHERE ')
+    else
+      ABuilder.Append(' AND ');
+
+    ABuilder.Append('(' + FOwner.FWhereCriterias[i] + ')');
+  end;
+end;
+
 function TSQLStatement.ToString: string;
 begin
   Result := '';
@@ -353,16 +383,7 @@ begin
       LBuilder.AppendLine.Append(' ' + FOwner.FJoinedTables[i].ToString);
     end;
 
-    for i := 0 to FOwner.FWhereCriterias.Count - 1 do
-    begin
-      if i = 0 then
-        LBuilder.AppendLine.Append(' WHERE ')
-      else
-        LBuilder.Append(' AND ');
-
-      LBuilder.Append('(' + FOwner.FWhereCriterias[i] + ')');
-    end;
-
+    GenerateWhereClause(LBuilder);
 
     for i := 0 to Owner.FGroupByCriterias.Count - 1 do
     begin
@@ -460,6 +481,28 @@ begin
   end;
 
   Result := Result + #13#10 + FUnionSQL;
+end;
+
+{ TDeleteStatement }
+
+function TDeleteStatement.ToString: string;
+var
+  LBuilder: TStringBuilder;
+begin
+  Result := '';
+  if (Owner.FTable.FTablename = '') then
+    Exit;
+
+  LBuilder := TStringBuilder.Create;
+  try
+    LBuilder.Append('DELETE FROM ').Append(Owner.FTable.FTablename);
+
+    GenerateWhereClause(LBuilder);
+
+    Result := LBuilder.ToString;
+  finally
+    LBuilder.Free;
+  end;
 end;
 
 end.
