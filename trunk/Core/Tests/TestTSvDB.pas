@@ -3,11 +3,11 @@ unit TestTSvDB;
 interface
 
 uses
-  TestFramework, SvDB
+  TestFramework, SvDB, SvTesting.DUnit
   ;
 
 type
-  TSvAnsiSQLBuilderTests = class(TTestCase)
+  TSvAnsiSQLBuilderTests = class(TSvTestCase)
   private
     FSQLBuilder: ISQLBuilder;
   public
@@ -18,9 +18,14 @@ type
     procedure Select_Union();
     procedure Delete_From_Where();
     procedure Delete_From();
+    procedure Insert_Into_Column_Values();
+    procedure Insert_Into_Values();
+    procedure Update_Set_Where();
+    procedure Update_SetNull();
+
   end;
 
-  TSvTransactSQLBuilderTests = class(TTestCase)
+  TSvTransactSQLBuilderTests = class(TSvTestCase)
   private
     FSQLBuilder: ISQLBuilder;
   public
@@ -28,6 +33,7 @@ type
     procedure TearDown; override;
   published
     procedure SelectTop();
+    procedure Update_Join();
   end;
 
 implementation
@@ -56,6 +62,32 @@ begin
     .ToString();
 
   CheckEquals('DELETE FROM dbo.Customers c'+ #13#10 + ' WHERE (c.AGE < 18)', LSQL);
+end;
+
+procedure TSvAnsiSQLBuilderTests.Insert_Into_Column_Values;
+var
+  LSQL: string;
+begin
+  LSQL := FSQLBuilder.Insert
+    .Into('dbo.Customers')
+    .Column('AGE').Values('18')
+    .Column('NAME').Values('Bob')
+    .ToString();
+
+  CheckEquals('INSERT INTO dbo.Customers'+ #13#10 + ' ('+#13#10+'AGE,NAME'+#13#10+' )'+#13#10+' VALUES'+#13#10+' (''18'',''Bob'')', LSQL);
+end;
+
+procedure TSvAnsiSQLBuilderTests.Insert_Into_Values;
+var
+  LSQL: string;
+begin
+  LSQL := FSQLBuilder.Insert
+    .Into('dbo.Customers')
+    .Values('18')
+    .Values('Bob')
+    .ToString();
+
+  CheckEquals('INSERT INTO dbo.Customers'+ #13#10 +' VALUES'+#13#10+' (''18'',''Bob'')', LSQL);
 end;
 
 procedure TSvAnsiSQLBuilderTests.Select;
@@ -126,6 +158,35 @@ begin
   inherited;
 end;
 
+procedure TSvAnsiSQLBuilderTests.Update_SetNull;
+var
+  LSQL: string;
+begin
+  LSQL := FSQLBuilder.Update
+    .Table('dbo.Customers')
+    .Column('AGE').Values('18')
+    .Column('NAME').Values('Null')
+    .ToString;
+
+  CheckEquals('UPDATE dbo.Customers' + #13#10 + ' SET' + #13#10 + ' AGE=''18'''+#13#10+' ,NAME=Null'
+    , LSQL);
+end;
+
+procedure TSvAnsiSQLBuilderTests.Update_Set_Where;
+var
+  LSQL: string;
+begin
+  LSQL := FSQLBuilder.Update
+    .Table('dbo.Customers')
+    .Column('AGE').Values('18')
+    .Column('NAME').Values('Bob')
+    .Where('AGE > 18')
+    .ToString;
+
+  CheckEquals('UPDATE dbo.Customers' + #13#10 + ' SET' + #13#10 + ' AGE=''18'''+#13#10+' ,NAME=''Bob''' + #13#10 +
+    ' WHERE (AGE > 18)', LSQL);
+end;
+
 { TSvTransactSQLBuilderTests }
 
 procedure TSvTransactSQLBuilderTests.SelectTop;
@@ -140,6 +201,23 @@ begin
     .From('dbo.Customers C')
     .Join('dbo.Details D on D.ID=C.ID').ToString;
   CheckEquals('SELECT TOP 100 C.FIRSTNAME,C.LASTNAME'+ #13#10 + ' FROM dbo.Customers C'+ #13#10 +' JOIN dbo.Details D on D.ID=C.ID', LSQL);
+end;
+
+procedure TSvTransactSQLBuilderTests.Update_Join;
+var
+  LSQL: string;
+begin
+  LSQL := FSQLBuilder.Update
+    .Table('C')
+    .Column('C.AGE').Values('18')
+    .Column('C.NAME').Values('Null')
+    .From('dbo.Customers C')
+    .Join('dbo.Orders o on o.CUSTID=c.CUSTID')
+    .ToString;
+
+  CheckEquals('UPDATE C' + #13#10 + ' SET' + #13#10 + ' C.AGE=''18'''+#13#10+' ,C.NAME=Null' + #13#10 +
+    ' FROM dbo.Customers C' + #13#10 + ' JOIN dbo.Orders o on o.CUSTID=c.CUSTID'
+    , LSQL);
 end;
 
 procedure TSvTransactSQLBuilderTests.SetUp;

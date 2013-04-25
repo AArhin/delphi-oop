@@ -9,11 +9,56 @@ uses
   ;
 
 type
+  {$REGION 'Documentation'}
+  ///	<summary>
+  ///	  Represents dynamic SQL Builder.
+  ///	</summary>
+  ///	<example>
+  ///	  <para>
+  ///	    Building <b>select</b> statements:
+  ///	  </para>
+  ///	  <code lang="Delphi">
+  ///	LSQLString := TSQLBuilder.Select.
+  ///
+  ///	  .Top(100)
+  ///	  .Column('C.FIRSTNAME')
+  ///	  .Column('C.LASTNAME')
+  ///
+  ///	  .From('dbo.Customers C')
+  ///	  .Join('dbo.Details D on D.ID=C.ID')
+  ///	  .ToString;</code>
+  ///	  <para>
+  ///	    Building <b>update</b> statements:
+  ///	  </para>
+  ///	  <code lang="Delphi">
+  ///	LSQLString := TSQLBuilder.Update
+  ///	  .Table('dbo.Customers')
+  ///	  .Column('AGE').Values('18')
+  ///	  .Column('NAME').Values('Null')
+  ///	  .ToString();
+  ///	  </code>
+  ///	  Building <b>insert</b> statements:
+  ///	  <code lang="Delphi">
+  ///	LSQLString := TSQLBuilder.Insert
+  ///	  .Into('dbo.Customers')
+  ///	  .Values('18')
+  ///	  .Values('Bob')
+  ///	  .ToString();</code>
+  ///	  Building <b>delete</b> statements:
+  ///	  <code lang="Delphi">
+  ///	LSQLString := TSQLBuilder.Delete
+  ///	  .From('dbo.Customers c')
+  ///	  .ToString();
+  ///	  </code>
+  ///	</example>
+  {$ENDREGION}
   ISQLBuilder = interface(IInvokable)
     function ToString(): string;
 
     function Select(): ISQLBuilder;
     function Delete(): ISQLBuilder;
+    function Insert(): ISQLBuilder;
+    function Update(): ISQLBuilder;
     function Column(const AColumnName: string): ISQLBuilder;
     function From(const ATableName: string): ISQLBuilder;
     function Join(const AJoinCriteria: string): ISQLBuilder;
@@ -28,6 +73,9 @@ type
     function UnionAll(const AUnionSQL: string): ISQLBuilder; overload;
     function Union(const AUnionSQL: ISQLBuilder): ISQLBuilder; overload;
     function UnionAll(const AUnionSQL: ISQLBuilder): ISQLBuilder; overload;
+    function Into(const ATableName: string): ISQLBuilder;
+    function Values(const AValue: string): ISQLBuilder;
+    function Table(const ATablename: string): ISQLBuilder;
   end;
 
   TAnsiSQLBuilder = class;
@@ -70,7 +118,10 @@ type
   private
     FOwner: TAnsiSQLBuilder;
   protected
-    procedure GenerateWhereClause(ABuilder: TStringBuilder); virtual;
+    procedure AppendWhereClause(ABuilder: TStringBuilder); virtual;
+    procedure AppendColumns(ABuilder: TStringBuilder); virtual;
+    procedure AppendJoinedTables(ABuilder: TStringBuilder); virtual;
+    procedure AppendFromClause(ABuilder: TStringBuilder); virtual;
   public
     constructor Create(AOwner: TAnsiSQLBuilder); virtual;
 
@@ -89,6 +140,22 @@ type
     function ToString(): string; override;
   end;
 
+  TInsertStatement = class(TSQLStatement)
+  protected
+    procedure AppendColumns(ABuilder: TStringBuilder); override;
+    procedure AppendValues(ABuilder: TStringBuilder); virtual;
+  public
+    function ToString(): string; override;
+  end;
+
+  TUpdateStatement = class(TSQLStatement)
+  protected
+    procedure AppendColumns(ABuilder: TStringBuilder); override;
+    procedure AppendFromClause(ABuilder: TStringBuilder); override;
+  public
+    function ToString(): string; override;
+  end;
+
   TAnsiSQLBuilder = class(TInterfacedObject, ISQLBuilder)
   private
     FSQLStmtType: TSQLStatementType;
@@ -99,8 +166,10 @@ type
     FGroupByCriterias: TStringList;
     FHavingCriterias: TStringList;
     FOrderByCriterias: TStringList;
+    FValues: TStringList;
     FTop: TSQLTop;
     FUnions: TObjectList<TSQLUnion>;
+    FFromTable: TSQLTable;
   protected
     function DoBuildSQL(AStatement: TSQLStatement): string; virtual;
 
@@ -113,6 +182,8 @@ type
 
     function Select(): ISQLBuilder; virtual;
     function Delete(): ISQLBuilder; virtual;
+    function Insert(): ISQLBuilder; virtual;
+    function Update(): ISQLBuilder; virtual;
     function Column(const AColumnName: string): ISQLBuilder; virtual;
     function From(const ATableName: string): ISQLBuilder; virtual;
     function Join(const AJoinCriteria: string): ISQLBuilder; virtual;
@@ -127,11 +198,17 @@ type
     function UnionAll(const AUnionSQL: string): ISQLBuilder; overload; virtual;
     function Union(const AUnionSQL: ISQLBuilder): ISQLBuilder; overload; virtual;
     function UnionAll(const AUnionSQL: ISQLBuilder): ISQLBuilder; overload; virtual;
+    function Into(const ATableName: string): ISQLBuilder; virtual;
+    function Values(const AValue: string): ISQLBuilder; virtual;
+    function Table(const ATablename: string): ISQLBuilder; virtual;
   end;
 
   TTransactSQLBuilder = class(TAnsiSQLBuilder)
   protected
     procedure AppendTop(ABuilder: TStringBuilder); override;
+  public
+    function From(const ATableName: string): ISQLBuilder; override;
+    function Table(const ATablename: string): ISQLBuilder; override;
   end;
 
 
@@ -140,6 +217,10 @@ type
 
 
 implementation
+
+uses
+  TypInfo
+  ;
 
 type
   EAnsiSQLBuilderException = class(Exception);
@@ -153,6 +234,15 @@ end;
 function TSQLBuilder(): ISQLBuilder;
 begin
   Result := TTransactSQLBuilder.Create;
+end;
+
+function GetSQLString(const AValue: string): string;
+begin
+  Result := AValue;
+  if not SameText(AValue, 'NULL') then
+  begin
+    Result := QuotedStr(AValue);
+  end;
 end;
 
 
@@ -183,11 +273,13 @@ begin
   FGroupByCriterias.StrictDelimiter := True;
   FHavingCriterias := TStringList.Create;
   FWhereCriterias := TStringList.Create;
+  FValues := TStringList.Create;
   FOrderByCriterias := TStringList.Create;
   FOrderByCriterias.Delimiter := ',';
   FOrderByCriterias.StrictDelimiter := True;
   FTop := TSQLTop.Create;
   FUnions := TObjectList<TSQLUnion>.Create(True);
+  FFromTable := TSQLTable.Create('');
 end;
 
 function TAnsiSQLBuilder.Delete: ISQLBuilder;
@@ -204,9 +296,11 @@ begin
   FGroupByCriterias.Free;
   FHavingCriterias.Free;
   FWhereCriterias.Free;
+  FValues.Free;
   FOrderByCriterias.Free;
   FTop.Free;
   FUnions.Free;
+  FFromTable.Free;
   inherited Destroy;
 end;
 
@@ -232,6 +326,17 @@ function TAnsiSQLBuilder.Having(const AHavingCriteria: string): ISQLBuilder;
 begin
   FHavingCriterias.Add(AHavingCriteria);
   Result := Self;
+end;
+
+function TAnsiSQLBuilder.Insert: ISQLBuilder;
+begin
+  FSQLStmtType := stInsert;
+  Result := Self;
+end;
+
+function TAnsiSQLBuilder.Into(const ATableName: string): ISQLBuilder;
+begin
+  Result := From(ATableName);
 end;
 
 function TAnsiSQLBuilder.Join(const AJoinCriteria: string): ISQLBuilder;
@@ -264,6 +369,11 @@ begin
   Result := Self;
 end;
 
+function TAnsiSQLBuilder.Table(const ATablename: string): ISQLBuilder;
+begin
+  Result := From(ATablename);
+end;
+
 function TAnsiSQLBuilder.Top(ACount: Integer): ISQLBuilder;
 begin
   FTop.FEnabled := True;
@@ -276,12 +386,17 @@ var
   LStatement: TSQLStatement;
 begin
   Result := '';
-  LStatement := nil;
+
   case FSQLStmtType of
     stSelect: LStatement := TSelectStatement.Create(Self);
-    stInsert: raise EAnsiSQLBuilderException.Create('Insert Not implemented');
-    stUpdate: raise EAnsiSQLBuilderException.Create('Update Not implemented');
+    stInsert: LStatement := TInsertStatement.Create(Self);
+    stUpdate: LStatement := TUpdateStatement.Create(Self);
     stDelete: LStatement := TDeleteStatement.Create(Self);
+    else
+    begin
+      raise EAnsiSQLBuilderException.CreateFmt('The statement (%S) is not implemented'
+        , [GetEnumName(TypeInfo(TSQLStatementType), Ord(FSQLStmtType))]);
+    end;
   end;
 
   try
@@ -319,6 +434,18 @@ begin
   Result := UnionAll(AUnionSQL.ToString);
 end;
 
+function TAnsiSQLBuilder.Update: ISQLBuilder;
+begin
+  FSQLStmtType := stUpdate;
+  Result := Self;
+end;
+
+function TAnsiSQLBuilder.Values(const AValue: string): ISQLBuilder;
+begin
+  FValues.Add(AValue);
+  Result := Self;
+end;
+
 { TSQLStatement }
 
 constructor TSQLStatement.Create(AOwner: TAnsiSQLBuilder);
@@ -327,7 +454,37 @@ begin
   FOwner := AOwner;
 end;
 
-procedure TSQLStatement.GenerateWhereClause(ABuilder: TStringBuilder);
+procedure TSQLStatement.AppendColumns(ABuilder: TStringBuilder);
+var
+  i: Integer;
+begin
+  for i := 0 to Owner.FColumns.Count - 1 do
+  begin
+    if i = 0 then
+      ABuilder.AppendLine
+    else
+      ABuilder.Append(',');
+
+    ABuilder.Append(Owner.FColumns[i]);
+  end;
+end;
+
+procedure TSQLStatement.AppendFromClause(ABuilder: TStringBuilder);
+begin
+  ABuilder.AppendLine.Append(' FROM ' + Owner.FTable.ToString);
+end;
+
+procedure TSQLStatement.AppendJoinedTables(ABuilder: TStringBuilder);
+var
+  i: Integer;
+begin
+  for i := 0 to FOwner.FJoinedTables.Count - 1 do
+  begin
+    ABuilder.AppendLine.Append(' ' + FOwner.FJoinedTables[i].ToString);
+  end;
+end;
+
+procedure TSQLStatement.AppendWhereClause(ABuilder: TStringBuilder);
 var
   i: Integer;
 begin
@@ -365,25 +522,13 @@ begin
     if FOwner.FTop.FEnabled then
       FOwner.AppendTop(LBuilder);
 
+    AppendColumns(LBuilder);
 
-    for i := 0 to Owner.FColumns.Count - 1 do
-    begin
-      if i = 0 then
-        LBuilder.AppendLine
-      else
-        LBuilder.Append(',');
+    AppendFromClause(LBuilder);
 
-      LBuilder.Append(Owner.FColumns[i]);
-    end;
+    AppendJoinedTables(LBuilder);
 
-    LBuilder.AppendLine.Append(' FROM ' + Owner.FTable.ToString);
-
-    for i := 0 to FOwner.FJoinedTables.Count - 1 do
-    begin
-      LBuilder.AppendLine.Append(' ' + FOwner.FJoinedTables[i].ToString);
-    end;
-
-    GenerateWhereClause(LBuilder);
+    AppendWhereClause(LBuilder);
 
     for i := 0 to Owner.FGroupByCriterias.Count - 1 do
     begin
@@ -464,6 +609,18 @@ begin
     ABuilder.Append('TOP ' + IntToStr(FTop.FCount) + ' ');
 end;
 
+function TTransactSQLBuilder.From(const ATableName: string): ISQLBuilder;
+begin
+  FFromTable.FTablename := ATableName;
+  Result := Self;
+end;
+
+function TTransactSQLBuilder.Table(const ATablename: string): ISQLBuilder;
+begin
+  FTable.FTablename := ATablename;
+  Result := Self;
+end;
+
 { TSQLUnion }
 
 constructor TSQLUnion.Create(AUnionType: TSQLUnionType; const AUnionSQL: string);
@@ -497,7 +654,117 @@ begin
   try
     LBuilder.Append('DELETE FROM ').Append(Owner.FTable.FTablename);
 
-    GenerateWhereClause(LBuilder);
+    AppendWhereClause(LBuilder);
+
+    Result := LBuilder.ToString;
+  finally
+    LBuilder.Free;
+  end;
+end;
+
+{ TInsertStatement }
+
+procedure TInsertStatement.AppendColumns(ABuilder: TStringBuilder);
+begin
+  if Owner.FColumns.Count > 0 then
+    ABuilder.AppendLine.Append(' (');
+
+  inherited AppendColumns(ABuilder);
+
+  if Owner.FColumns.Count > 0 then
+    ABuilder.AppendLine.Append(' )');
+end;
+
+procedure TInsertStatement.AppendValues(ABuilder: TStringBuilder);
+var
+  i: Integer;
+begin
+  for i := 0 to Owner.FValues.Count - 1 do
+  begin
+    if i = 0 then
+      ABuilder.AppendLine.Append(' VALUES').AppendLine.Append(' (')
+    else
+      ABuilder.Append(',');
+
+    ABuilder.Append(GetSQLString(Owner.FValues[i]));
+  end;
+
+  if Owner.FValues.Count > 0 then
+    ABuilder.Append(')');
+end;
+
+function TInsertStatement.ToString: string;
+var
+  LBuilder: TStringBuilder;
+begin
+  Result := '';
+  if (Owner.FTable.FTablename = '') then
+    Exit;
+
+  LBuilder := TStringBuilder.Create;
+  try
+    LBuilder.Append('INSERT INTO ').Append(Owner.FTable.FTablename);
+
+    AppendColumns(LBuilder);
+
+    AppendValues(LBuilder);
+
+    Result := LBuilder.ToString;
+  finally
+    LBuilder.Free;
+  end;
+end;
+
+{ TUpdateStatement }
+
+procedure TUpdateStatement.AppendColumns(ABuilder: TStringBuilder);
+var
+  i: Integer;
+begin
+  Assert(Owner.FColumns.Count = Owner.FValues.Count, 'Columns count and Values count must be equal');
+  for i := 0 to Owner.FColumns.Count - 1 do
+  begin
+    if i = 0 then
+      ABuilder.AppendLine.Append(' ')
+    else
+      ABuilder.AppendLine.Append(' ,');
+
+    ABuilder.AppendFormat('%0:S=%1:S',
+      [
+        Owner.FColumns[i]
+        ,GetSQLString(Owner.FValues[i])
+      ]);
+  end;
+end;
+
+procedure TUpdateStatement.AppendFromClause(ABuilder: TStringBuilder);
+begin
+  if (Owner.FFromTable.FTablename = '') then
+    Exit;
+
+  ABuilder.AppendLine.Append(' FROM ').Append(Owner.FFromTable.FTablename);
+end;
+
+function TUpdateStatement.ToString: string;
+var
+  LBuilder: TStringBuilder;
+begin
+  Result := '';
+
+  if (Owner.FTable.FTablename = '') then
+    Exit;
+
+  LBuilder := TStringBuilder.Create;
+  try
+    LBuilder.Append('UPDATE ').Append(Owner.FTable.FTablename).AppendLine.Append(' SET');
+
+    AppendColumns(LBuilder);
+
+    AppendFromClause(LBuilder);
+
+    AppendJoinedTables(LBuilder);
+
+    AppendWhereClause(LBuilder);
 
     Result := LBuilder.ToString;
   finally
