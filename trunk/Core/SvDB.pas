@@ -19,11 +19,9 @@ type
   ///	  </para>
   ///	  <code lang="Delphi">
   ///	LSQLString := TSQLBuilder.Select.
-  ///
   ///	  .Top(100)
   ///	  .Column('C.FIRSTNAME')
   ///	  .Column('C.LASTNAME')
-  ///
   ///	  .From('dbo.Customers C')
   ///	  .Join('dbo.Details D on D.ID=C.ID')
   ///	  .ToString;</code>
@@ -35,8 +33,7 @@ type
   ///	  .Table('dbo.Customers')
   ///	  .Column('AGE').Values('18')
   ///	  .Column('NAME').Values('Null')
-  ///	  .ToString();
-  ///	  </code>
+  ///	  .ToString();</code>
   ///	  Building <b>insert</b> statements:
   ///	  <code lang="Delphi">
   ///	LSQLString := TSQLBuilder.Insert
@@ -48,33 +45,157 @@ type
   ///	  <code lang="Delphi">
   ///	LSQLString := TSQLBuilder.Delete
   ///	  .From('dbo.Customers c')
-  ///	  .ToString();
-  ///	  </code>
+  ///	  .ToString();</code>
   ///	</example>
   {$ENDREGION}
   ISQLBuilder = interface(IInvokable)
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Builds sql statement and returns it as string.
+    ///	</summary>
+    {$ENDREGION}
     function ToString(): string;
 
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Represents <b>select</b> sql statement.
+    ///	</summary>
+    {$ENDREGION}
     function Select(): ISQLBuilder;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Represents <b>delete</b> sql statement.
+    ///	</summary>
+    {$ENDREGION}
     function Delete(): ISQLBuilder;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Represents <b>insert</b> sql statement.
+    ///	</summary>
+    {$ENDREGION}
     function Insert(): ISQLBuilder;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Represents <b>update</b> sql statement.
+    ///	</summary>
+    {$ENDREGION}
     function Update(): ISQLBuilder;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Adds <i>Column</i> definition for sql statement. Can be used in
+    ///	  <b>select</b>, <b>update</b> and <b>insert</b> statements.
+    ///	</summary>
+    {$ENDREGION}
     function Column(const AColumnName: string): ISQLBuilder;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Represents the main <i>table name</i> which will be used in
+    ///	  <b>from</b> part of the statement. Can be used in <b>select</b>,
+    ///	  <b>update</b>, <b>delete</b> statements.
+    ///	</summary>
+    {$ENDREGION}
     function From(const ATableName: string): ISQLBuilder;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Represents joined table criteria.
+    ///	</summary>
+    {$ENDREGION}
     function Join(const AJoinCriteria: string): ISQLBuilder;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Represents left outer joined table criteria.
+    ///	</summary>
+    {$ENDREGION}
     function LeftOuterJoin(const AJoinCriteria: string): ISQLBuilder;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Represents right outer joined table criteria.
+    ///	</summary>
+    {$ENDREGION}
     function RightOuterJoin(const AJoinCriteria: string): ISQLBuilder;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Represents <b>where</b> criteria. In case it is defined multiple
+    ///	  times, all the criterias will be separated by <i>AND</i> identifier.
+    ///	</summary>
+    {$ENDREGION}
     function Where(const ACriteria: string): ISQLBuilder;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Represents <i>group by</i> part of the sql statement.
+    ///	</summary>
+    {$ENDREGION}
     function GroupBy(const AGroupByCriteria: string): ISQLBuilder;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Represents <i>having</i> part of the sql statement.
+    ///	</summary>
+    {$ENDREGION}
     function Having(const AHavingCriteria: string): ISQLBuilder;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Represents <i>order by</i> part of the sql statement.
+    ///	</summary>
+    {$ENDREGION}
     function OrderBy(const AOrderByCriteria: string): ISQLBuilder;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Represents <i>top</i> part of the sql statement.
+    ///	</summary>
+    {$ENDREGION}
     function Top(ACount: Integer): ISQLBuilder;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Represents <i>union</i> part of the sql statement.
+    ///	</summary>
+    {$ENDREGION}
     function Union(const AUnionSQL: string): ISQLBuilder; overload;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Represents <i>union all</i> part of the sql statement.
+    ///	</summary>
+    {$ENDREGION}
     function UnionAll(const AUnionSQL: string): ISQLBuilder; overload;
+
     function Union(const AUnionSQL: ISQLBuilder): ISQLBuilder; overload;
+
     function UnionAll(const AUnionSQL: ISQLBuilder): ISQLBuilder; overload;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Represents <i>into</i> part of the sql statement. Can be used in <b>insert</b> statements.
+    ///	</summary>
+    {$ENDREGION}
     function Into(const ATableName: string): ISQLBuilder;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Represents <i>values</i> part of the sql statement. Can be used in <b>insert</b>, <b>update</b> statements.
+    ///	</summary>
+    {$ENDREGION}
     function Values(const AValue: string): ISQLBuilder;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Represents <i>table</i> used in <b>update</b> sql statement.
+    ///	</summary>
+    {$ENDREGION}
     function Table(const ATablename: string): ISQLBuilder;
   end;
 
@@ -114,6 +235,11 @@ type
 
   TSQLStatementType = (stSelect, stInsert, stUpdate, stDelete);
 
+  {$REGION 'Documentation'}
+  ///	<summary>
+  ///	  Base SQL statement type.
+  ///	</summary>
+  {$ENDREGION}
   TSQLStatement = class
   private
     FOwner: TAnsiSQLBuilder;
@@ -130,16 +256,31 @@ type
     property Owner: TAnsiSQLBuilder read FOwner;
   end;
 
+  {$REGION 'Documentation'}
+  ///	<summary>
+  ///	  Represents select statement.
+  ///	</summary>
+  {$ENDREGION}
   TSelectStatement = class(TSQLStatement)
   public
     function ToString(): string; override;
   end;
 
+  {$REGION 'Documentation'}
+  ///	<summary>
+  ///	  Represents delete statement.
+  ///	</summary>
+  {$ENDREGION}
   TDeleteStatement = class(TSQLStatement)
   public
     function ToString(): string; override;
   end;
 
+  {$REGION 'Documentation'}
+  ///	<summary>
+  ///	  Represents insert statement.
+  ///	</summary>
+  {$ENDREGION}
   TInsertStatement = class(TSQLStatement)
   protected
     procedure AppendColumns(ABuilder: TStringBuilder); override;
@@ -148,6 +289,11 @@ type
     function ToString(): string; override;
   end;
 
+  {$REGION 'Documentation'}
+  ///	<summary>
+  ///	  Represents update statement.
+  ///	</summary>
+  {$ENDREGION}
   TUpdateStatement = class(TSQLStatement)
   protected
     procedure AppendColumns(ABuilder: TStringBuilder); override;
@@ -156,6 +302,11 @@ type
     function ToString(): string; override;
   end;
 
+  {$REGION 'Documentation'}
+  ///	<summary>
+  ///	  Base SQL builder.
+  ///	</summary>
+  {$ENDREGION}
   TAnsiSQLBuilder = class(TInterfacedObject, ISQLBuilder)
   private
     FSQLStmtType: TSQLStatementType;
@@ -203,6 +354,11 @@ type
     function Table(const ATablename: string): ISQLBuilder; virtual;
   end;
 
+  {$REGION 'Documentation'}
+  ///	<summary>
+  ///	  Represents Transact-SQL (Microsoft SQL Server) builder.
+  ///	</summary>
+  {$ENDREGION}
   TTransactSQLBuilder = class(TAnsiSQLBuilder)
   protected
     procedure AppendTop(ABuilder: TStringBuilder); override;
@@ -212,7 +368,18 @@ type
   end;
 
 
+  {$REGION 'Documentation'}
+  ///	<summary>
+  ///	  Constructs Ansi-SQL builder interface.
+  ///	</summary>
+  {$ENDREGION}
   function AnsiSQLBuilder(): ISQLBuilder;
+
+  {$REGION 'Documentation'}
+  ///	<summary>
+  ///	  Constructs Transact-SQL builder interface.
+  ///	</summary>
+  {$ENDREGION}
   function TSQLBuilder(): ISQLBuilder;
 
 
