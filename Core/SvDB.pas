@@ -373,9 +373,6 @@ type
   TTransactSQLBuilder = class(TAnsiSQLBuilder)
   protected
     procedure AppendTop(ABuilder: TStringBuilder); override;
-  public
-    function From(const ATableName: string): ISQLBuilder; override;
-    function Table(const ATablename: string): ISQLBuilder; override;
   end;
 
 
@@ -490,7 +487,7 @@ end;
 
 function TAnsiSQLBuilder.From(const ATableName: string): ISQLBuilder;
 begin
-  FTable.FTablename := ATableName;
+  FFromTable.FTablename := ATableName;
   Result := Self;
 end;
 
@@ -514,7 +511,7 @@ end;
 
 function TAnsiSQLBuilder.Into(const ATableName: string): ISQLBuilder;
 begin
-  Result := From(ATableName);
+  Result := Table(ATableName);
 end;
 
 function TAnsiSQLBuilder.Join(const AJoinCriteria: string): ISQLBuilder;
@@ -549,7 +546,8 @@ end;
 
 function TAnsiSQLBuilder.Table(const ATablename: string): ISQLBuilder;
 begin
-  Result := From(ATablename);
+  FTable.FTablename := ATableName;
+  Result := Self;
 end;
 
 function TAnsiSQLBuilder.Top(ACount: Integer): ISQLBuilder;
@@ -649,7 +647,7 @@ end;
 
 procedure TSQLStatement.AppendFromClause(ABuilder: TStringBuilder);
 begin
-  ABuilder.AppendLine.Append(' FROM ' + Owner.FTable.ToString);
+  ABuilder.AppendLine.Append(' FROM ' + Owner.FFromTable.ToString);
 end;
 
 procedure TSQLStatement.AppendJoinedTables(ABuilder: TStringBuilder);
@@ -690,7 +688,7 @@ var
   LBuilder: TStringBuilder;
 begin
   Result := '';
-  if (Owner.FColumns.Count < 1) or (Owner.FTable.FTablename = '') then
+  if (Owner.FColumns.Count < 1) or (Owner.FFromTable.FTablename = '') then
     Exit;
 
   LBuilder := TStringBuilder.Create;
@@ -787,18 +785,6 @@ begin
     ABuilder.Append('TOP ' + IntToStr(FTop.FCount) + ' ');
 end;
 
-function TTransactSQLBuilder.From(const ATableName: string): ISQLBuilder;
-begin
-  FFromTable.FTablename := ATableName;
-  Result := Self;
-end;
-
-function TTransactSQLBuilder.Table(const ATablename: string): ISQLBuilder;
-begin
-  FTable.FTablename := ATablename;
-  Result := Self;
-end;
-
 { TSQLUnion }
 
 constructor TSQLUnion.Create(AUnionType: TSQLUnionType; const AUnionSQL: string);
@@ -825,12 +811,12 @@ var
   LBuilder: TStringBuilder;
 begin
   Result := '';
-  if (Owner.FTable.FTablename = '') then
+  if (Owner.FFromTable.FTablename = '') then
     Exit;
 
   LBuilder := TStringBuilder.Create;
   try
-    LBuilder.Append('DELETE FROM ').Append(Owner.FTable.FTablename);
+    LBuilder.Append('DELETE FROM ').Append(Owner.FFromTable.FTablename);
 
     AppendWhereClause(LBuilder);
 

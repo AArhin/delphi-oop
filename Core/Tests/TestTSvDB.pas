@@ -22,7 +22,7 @@ type
     procedure Insert_Into_Values();
     procedure Update_Set_Where();
     procedure Update_SetNull();
-
+    procedure Update_Set_Where_Dequoted();
   end;
 
   TSvTransactSQLBuilderTests = class(TSvTestCase)
@@ -187,6 +187,21 @@ begin
     ' WHERE (AGE > 18)', LSQL);
 end;
 
+procedure TSvAnsiSQLBuilderTests.Update_Set_Where_Dequoted;
+var
+  LSQL: string;
+begin
+  LSQL := FSQLBuilder.Update
+    .Table('dbo.Customers')
+    .Column('AGE').Values('18', False)
+    .Column('NAME').Values('Bob')
+    .Where('AGE > 18')
+    .ToString;
+
+  CheckEquals('UPDATE dbo.Customers' + #13#10 + ' SET' + #13#10 + ' AGE=18'+#13#10+' ,NAME=''Bob''' + #13#10 +
+    ' WHERE (AGE > 18)', LSQL);
+end;
+
 { TSvTransactSQLBuilderTests }
 
 procedure TSvTransactSQLBuilderTests.SelectTop;
@@ -200,7 +215,7 @@ begin
   LSQL := FSQLBuilder
     .From('dbo.Customers C')
     .Join('dbo.Details D on D.ID=C.ID').ToString;
-  CheckEquals('SELECT TOP 100 C.FIRSTNAME,C.LASTNAME'+ #13#10 + ' FROM dbo.Customers C'+ #13#10 +' JOIN dbo.Details D on D.ID=C.ID', LSQL);
+  CheckEquals('SELECT TOP 100 ' +#13#10 + 'C.FIRSTNAME,C.LASTNAME'+ #13#10 + ' FROM dbo.Customers C'+ #13#10 +' JOIN dbo.Details D on D.ID=C.ID', LSQL);
 end;
 
 procedure TSvTransactSQLBuilderTests.Update_Join;
