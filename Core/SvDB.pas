@@ -189,7 +189,7 @@ type
     ///	  Represents <i>values</i> part of the sql statement. Can be used in <b>insert</b>, <b>update</b> statements.
     ///	</summary>
     {$ENDREGION}
-    function Values(const AValue: string): ISQLBuilder;
+    function Values(const AValue: string; AIncludeQuotes: Boolean = True): ISQLBuilder;
 
     {$REGION 'Documentation'}
     ///	<summary>
@@ -204,6 +204,17 @@ type
   TJoinType = (jtNone, jtInner, jtLeftOuter, jtRightOuter);
 
   TSQLUnionType = (utUnion, utUnionAll);
+
+  TSQLValue = class
+  private
+    FValue: string;
+    FIncludeQuotes: Boolean;
+    function GetValue: string;
+  public
+    constructor Create(const AValue: string; AIncludeQuotes: Boolean = True); virtual;
+
+    property Value: string read GetValue;
+  end;
 
   TSQLTable = class
   private
@@ -317,7 +328,7 @@ type
     FGroupByCriterias: TStringList;
     FHavingCriterias: TStringList;
     FOrderByCriterias: TStringList;
-    FValues: TStringList;
+    FValues: TObjectList<TSQLValue>;
     FTop: TSQLTop;
     FUnions: TObjectList<TSQLUnion>;
     FFromTable: TSQLTable;
@@ -350,7 +361,7 @@ type
     function Union(const AUnionSQL: ISQLBuilder): ISQLBuilder; overload; virtual;
     function UnionAll(const AUnionSQL: ISQLBuilder): ISQLBuilder; overload; virtual;
     function Into(const ATableName: string): ISQLBuilder; virtual;
-    function Values(const AValue: string): ISQLBuilder; virtual;
+    function Values(const AValue: string; AIncludeQuotes: Boolean = True): ISQLBuilder; virtual;
     function Table(const ATablename: string): ISQLBuilder; virtual;
   end;
 
@@ -440,7 +451,7 @@ begin
   FGroupByCriterias.StrictDelimiter := True;
   FHavingCriterias := TStringList.Create;
   FWhereCriterias := TStringList.Create;
-  FValues := TStringList.Create;
+  FValues := TObjectList<TSQLValue>.Create(True);
   FOrderByCriterias := TStringList.Create;
   FOrderByCriterias.Delimiter := ',';
   FOrderByCriterias.StrictDelimiter := True;
@@ -607,9 +618,9 @@ begin
   Result := Self;
 end;
 
-function TAnsiSQLBuilder.Values(const AValue: string): ISQLBuilder;
+function TAnsiSQLBuilder.Values(const AValue: string; AIncludeQuotes: Boolean): ISQLBuilder;
 begin
-  FValues.Add(AValue);
+  FValues.Add(TSQLValue.Create(AValue, AIncludeQuotes));
   Result := Self;
 end;
 
@@ -853,7 +864,7 @@ begin
     else
       ABuilder.Append(',');
 
-    ABuilder.Append(GetSQLString(Owner.FValues[i]));
+    ABuilder.Append(Owner.FValues[i].Value);
   end;
 
   if Owner.FValues.Count > 0 then
@@ -899,7 +910,7 @@ begin
     ABuilder.AppendFormat('%0:S=%1:S',
       [
         Owner.FColumns[i]
-        ,GetSQLString(Owner.FValues[i])
+        ,Owner.FValues[i].Value
       ]);
   end;
 end;
@@ -937,6 +948,22 @@ begin
   finally
     LBuilder.Free;
   end;
+end;
+
+{ TSQLValue }
+
+constructor TSQLValue.Create(const AValue: string; AIncludeQuotes: Boolean);
+begin
+  inherited Create();
+  FValue := AValue;
+  FIncludeQuotes := AIncludeQuotes;
+end;
+
+function TSQLValue.GetValue: string;
+begin
+  Result := FValue;
+  if FIncludeQuotes then
+    Result := GetSQLString(Result);
 end;
 
 end.
