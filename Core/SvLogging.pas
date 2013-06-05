@@ -75,8 +75,29 @@ type
   end;
 
 
+function Logger(): ISvLogger;
+
+procedure CreateLogger(var ALogger: ISvLogger);
 
 implementation
+
+type
+  ESvLoggerException = class(Exception);
+
+var
+  FLogger: ISvLogger = nil;
+
+function Logger(): ISvLogger;
+begin
+  if not Assigned(FLogger) then
+    raise ESvLoggerException.Create('Logger not created. You must "CreateLogger" before using it.');
+  Result := FLogger;
+end;
+
+procedure CreateLogger(var ALogger: ISvLogger);
+begin
+  FLogger := ALogger;
+end;
 
 { TSvBaseLogger }
 
