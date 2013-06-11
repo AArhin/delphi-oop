@@ -96,7 +96,7 @@ type
     property AutoFreeModel: Boolean read GetAutoFreeModel write SetAutoFreeModel;
 
     property Model: TModel read GetModel;
-
+    property View: TObject read FView;
   end;
 
   TControllerFactory<TModel: class> = class
