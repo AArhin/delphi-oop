@@ -59,9 +59,16 @@ type
 
     procedure Log(ALevel: TSvLogLevel; const AMessage: string; AException: Exception = nil);
     procedure LogFmt(ALevel: TSvLogLevel; const AMessage: string; const AParameters: array of const; AException: Exception = nil);
+
+    function GetLevel: TSvLogLevel;
+    procedure SetLevel(const Value: TSvLogLevel);
+    property Level: TSvLogLevel read GetLevel write SetLevel;
   end;
 
   TSvBaseLogger = class(TInterfacedObject, ISvLogger)
+  protected
+    function GetLevel: TSvLogLevel; virtual; abstract;
+    procedure SetLevel(const Value: TSvLogLevel); virtual; abstract;
   public
     procedure Fatal(const AMessage: string; AException: Exception = nil);
     procedure Error(const AMessage: string; AException: Exception = nil);
@@ -72,6 +79,8 @@ type
 
     procedure Log(ALevel: TSvLogLevel; const AMessage: string; AException: Exception = nil); virtual; abstract;
     procedure LogFmt(ALevel: TSvLogLevel; const AMessage: string; const AParameters: array of const; AException: Exception = nil); virtual;
+
+    property Level: TSvLogLevel read GetLevel write SetLevel;
   end;
 
 
