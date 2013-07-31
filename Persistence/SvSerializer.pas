@@ -389,6 +389,7 @@ type
     property SerializeFormat: TSvSerializeFormat read FSerializeFormat write SetSerializeFormat;
   end;
 
+  {$IFDEF SV_HELPERS}
   {$REGION 'Documentation'}
   ///	<summary>
   ///	  Represents class helper for <c>TObject</c> class which extends
@@ -411,7 +412,7 @@ type
     constructor FromJsonString(const AJsonString: string);
     constructor FromXmlString(const AXmlString: string);
   end;
-
+  {$ENDIF}
 
 
 implementation
@@ -877,6 +878,8 @@ begin
   end;
 end;
 
+{$IFDEF SV_HELPERS}
+
 { TSvObjectHelper }
 
 constructor TSvObjectHelper.FromJsonString(const AJsonString: string);
@@ -926,6 +929,8 @@ function TSvObjectHelper.ToXmlString: string;
 begin
   Result := ToSerializedString(sstNativeXML);
 end;
+
+{$ENDIF}
 
 
 
