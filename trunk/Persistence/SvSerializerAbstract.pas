@@ -1080,8 +1080,10 @@ begin
     end
     else
     begin
-      Skip := True;
-      PostError('Unsupported value type: ' + GetTypeName( System.TypeInfo(T)));
+      //try get value as string and convert it to corresponding type
+      Result := DoSetFromString(AFrom, AType, Skip);
+     // if Skip then
+     //   PostError('Unsupported value type: ' + GetTypeName( System.TypeInfo(T)));
     end;
   end;
 end;

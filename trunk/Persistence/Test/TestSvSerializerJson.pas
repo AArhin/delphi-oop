@@ -376,6 +376,8 @@ type
   public
     procedure SetUp; override;
     procedure TearDown; override;
+
+    property Serializer: TSvSerializer read FSerializer;
     property SerializerType: TSvSerializeFormat read FSerializerType write FSerializerType;
   protected
     FILE_SERIALIZE: string;
@@ -410,6 +412,8 @@ type
   public
     procedure SetUp; override;
     procedure TearDown; override;
+  published
+    procedure DeserializeFromXMLString();
   end;
 
 implementation
@@ -1468,6 +1472,53 @@ begin
 end;
 
 { TestTSvNativeXMLSerializer }
+
+type
+  TAsmuo = class
+  private
+    FASM_ID: Integer;
+    FASM_VARDAS: string;
+    FASM_PAVARDE: string;
+  public
+    property ASM_ID: Integer read FASM_ID write FASM_ID;
+    property ASM_VARDAS: string read FASM_VARDAS write FASM_VARDAS;
+    property ASM_PAVARDE: string read FASM_PAVARDE write FASM_PAVARDE;
+  end;
+
+procedure TestTSvNativeXMLSerializer.DeserializeFromXMLString;
+var
+  LAsmenys: TObjectList<TAsmuo>;
+const
+  ASMENYS_XML: string = '<?xml version = ''1.0'' encoding=''UTF-8'' ?> '+
+  '<ASMENYS> '+
+  '<ASMUO> '+
+  '	<ASM_ID>111</ASM_ID> '+
+  '	<ASM_VARDAS>VARDENĖ</ASM_VARDAS> '+
+  '	<ASM_PAVARDE>PAVARDENĖ</ASM_PAVARDE> '+
+  '</ASMUO> '+
+  '<ASMUO> '+
+  '	<ASM_ID>112</ASM_ID> '+
+  '	<ASM_VARDAS>VARDENIS</ASM_VARDAS> '+
+  '	<ASM_PAVARDE>PAVARDENIS</ASM_PAVARDE> '+
+  '</ASMUO> '+
+  '</ASMENYS> ';
+begin
+  LAsmenys := TObjectList<TAsmuo>.Create(True);
+  try
+    TSvSerializer.DeSerializeObject(LAsmenys, ASMENYS_XML, sstNativeXML);
+    CheckEquals(2, LAsmenys.Count);
+    CheckEquals(111, LAsmenys[0].ASM_ID);
+    CheckEquals(112, LAsmenys[1].ASM_ID);
+
+    CheckEquals('VARDENĖ', LAsmenys[0].ASM_VARDAS);
+    CheckEquals('VARDENIS', LAsmenys[1].ASM_VARDAS);
+
+    CheckEquals('PAVARDENĖ', LAsmenys[0].ASM_PAVARDE);
+    CheckEquals('PAVARDENIS', LAsmenys[1].ASM_PAVARDE);
+  finally
+    LAsmenys.Free;
+  end;
+end;
 
 procedure TestTSvNativeXMLSerializer.SetUp;
 begin
