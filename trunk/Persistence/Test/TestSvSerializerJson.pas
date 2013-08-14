@@ -400,6 +400,7 @@ type
     procedure Test_ClassMethods();
     procedure TestNewPropertyAdded();
     procedure SerializeListOnly();
+    procedure DateSupportTest();
   end;
 
   TestTSvSuperJsonSerializer = class(TestTSvJsonSerializerFactory)
@@ -495,6 +496,46 @@ end;
 procedure TDemoObj.SetName(const Value: string);
 begin
   FName := Value;
+end;
+
+type
+  TDateBean = class
+  private
+    FCurrentDate: TDate;
+    FCurrentDateTime: TDateTime;
+  public
+    property CurrentDate: TDate read FCurrentDate write FCurrentDate;
+    property CurrentDateTime: TDateTime read FCurrentDateTime write FCurrentDateTime;
+  end;
+
+procedure TestTSvJsonSerializerFactory.DateSupportTest;
+var
+  LBean: TDateBean;
+  LNow: TDateTime;
+  LOutputString: string;
+begin
+  LBean := TDateBean.Create;
+  try
+    LNow := EncodeDateTime(2012,1,1,12,0,0,0);
+    LBean.CurrentDate := Today;
+    LBean.CurrentDateTime := LNow;
+
+    LOutputString := '';
+    Serializer.SerializeObject(LBean, LOutputString, Serializer.SerializeFormat);
+    CheckTrue(LOutputString <> '');
+    CheckTrue(Pos('2012-01-01 12:00:00', LOutputString) > 1);
+  finally
+    LBean.Free;
+  end;
+
+  LBean := TDateBean.Create;
+  try
+    Serializer.DeSerializeObject(LBean, LOutputString, Serializer.SerializeFormat);
+    CheckTrue(SameDate(Today, LBean.CurrentDate));
+    CheckTrue(SameDateTime(LNow, LBean.CurrentDateTime) );
+  finally
+    LBean.Free;
+  end;
 end;
 
 procedure TestTSvJsonSerializerFactory.SerializeListOnly;
