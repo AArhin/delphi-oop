@@ -796,7 +796,19 @@ begin
       begin
         Result := CreateString(AFrom.ToString);
       end;
-      tkFloat: Result := CreateDouble(AFrom.AsExtended);
+      tkFloat:
+      begin
+        if (TypeInfo(TDate) = AFrom.TypeInfo) then
+        begin
+          Result := CreateString(DateToStr(AFrom.AsExtended, FFormatSettings));
+        end
+        else if (TypeInfo(TDateTime) = AFrom.TypeInfo)  then
+        begin
+          Result := CreateString(DateTimeToStr(AFrom.AsExtended, FFormatSettings));
+        end
+        else
+          Result := CreateDouble(AFrom.AsExtended);
+      end;
       tkString, tkWChar, tkLString, tkWString, tkChar, tkUString:
         Result := CreateString(AFrom.AsString);
       tkArray, tkDynArray:
