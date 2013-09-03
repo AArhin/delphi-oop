@@ -89,7 +89,6 @@ begin
       end;
     finally
       LGeoNames.Free;
-      LMessage.Free;
     end;
   finally
     LClient.Free;
