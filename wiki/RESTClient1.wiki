@@ -55,12 +55,12 @@ type
 
 Define our client:
 
-{{{
-  [Path('/neighboursJSON')]
+{{{  
   TGeonamesClient = class(TRESTClient<geoname>)
   public
     [GET]
     [Consumes(MEDIA_TYPE.JSON)]
+    [Path('/neighboursJSON')]
     function GetNeighbours(geonameId: Int64; const username: string = 'demo'): TGeonames; virtual;
 }}}
 
