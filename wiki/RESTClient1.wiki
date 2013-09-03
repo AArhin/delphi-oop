@@ -1,0 +1,98 @@
+#summary RESTClient Introduction
+#labels Phase-Implementation
+
+= Usage example=
+
+In this example we will show you how to consume GeoNames.org RESTful web service.
+
+First, define your GeoNames types:
+{{{
+uses
+  REST.Client
+  ,Generics.Collections
+  ,HTTPClient
+  ;
+
+type
+  geoname = class
+  private
+    FtoponymName: string;
+    Fname: string;
+    Flat: Integer;
+    Flng: Integer;
+    FgeonameId: Int64;
+    FcountryCode: string;
+    FcountryName: string;
+    Ffcl: string;
+    Ffcode: string;
+    Fpopulation: Integer;
+  public
+    property toponymName: string read FtoponymName write FtoponymName;
+    property name: string read Fname write Fname;
+    property lat: Integer read Flat write Flat;
+    property lng: Integer read Flng write Flng;
+    property geonameId: Int64 read FgeonameId write FgeonameId;
+    property countryCode: string read FcountryCode write FcountryCode;
+    property countryName: string read FcountryName write FcountryName;
+    property fcl: string read Ffcl write Ffcl;
+    property fcode: string read Ffcode write Ffcode;
+    property population: Integer read Fpopulation write Fpopulation;
+
+  end;
+
+  TGeonames = class
+  private
+    Fgeonames: TObjectList<geoname>;
+    FtotalResultsCount: Integer;
+  public
+    destructor Destroy; override;
+
+    property totalResultsCount: Integer read FtotalResultsCount write FtotalResultsCount;
+    property geonames: TSvObjectList<geoname> read Fgeonames write Fgeonames;
+  end;
+
+}}}
+
+Define our client:
+
+{{{
+  [Path('/neighboursJSON')]
+  TGeonamesClient = class(TRESTClient<geoname>)
+  public
+    [GET]
+    [Consumes(MEDIA_TYPE.JSON)]
+    function GetNeighbours(geonameId: Int64; const username: string = 'demo'): TGeonames; virtual;
+}}}
+
+As you see, our TGeonamesClient should inherit from TRESTClient class. Attributes are used here to define various properties which our client will use, e.g. [Consumes(MEDIA_TYPE.JSON)] specifies that TRestClient will automatically deserialize recieved json string from the server into TGeonames instance, [GET] specifies that GET request will be used, [Path('/neighboursJSON')] specifies relative path.
+
+That's it. Now we just need to create our client and call it's GetNeighbours method (TRESTClient then execute HTTP GET request (URL: http://api.geonames.org/neighboursJSON?geonameId=597427&username=demo):
+{{{
+procedure Main();
+var
+  LClient: TGeonamesClient;
+  LGeoNames: TGeonames;
+begin
+  LClient := TGeonamesClient.Create('http://api.geonames.org');
+  try
+    LClient.SetHttpClient('idHttp');
+    LGeoNames := LClient.GetNeighbours(597427, 'demo');
+    try
+      if (Assigned(LGeoNames.geonames)) and (LGeoNames.geonames.Count > 0) then
+      begin
+        Writeln(Format('Total Count %D', [LGeoNames.totalResultsCount]));
+        Writeln(Format('First country name: %S', [LGeoNames.geonames[0].countryName]));
+        Writeln(Format('First country latitude: %D', [LGeoNames.geonames[0].lat]));
+        Writeln(Format('First country longitude: %D', [LGeoNames.geonames[0].lng]));
+        Writeln(Format('First country code: %S', [LGeoNames.geonames[0].countryCode]));
+        Writeln(Format('First country population: %D', [LGeoNames.geonames[0].population]));
+      end;
+    finally
+      LGeoNames.Free;
+      LMessage.Free;
+    end;
+  finally
+    LClient.Free;
+  end;
+end;
+}}} 
