@@ -53,7 +53,7 @@ type
 
 }}}
 
-Define our client:
+Define our client type:
 
 {{{  
   TGeonamesClient = class(TRESTClient)
@@ -64,7 +64,18 @@ Define our client:
     function GetNeighbours(geonameId: Int64; const username: string = 'demo'): TGeonames; virtual;
 }}}
 
-As you see, our TGeonamesClient should inherit from TRESTClient class. Attributes are used here to define various properties which our client will use, e.g. [Consumes(MEDIA_TYPE.JSON)] specifies that TRestClient will automatically deserialize recieved json string from the server into TGeonames instance, [GET] specifies that GET request will be used, [Path('/neighboursJSON')] specifies relative path.
+Or if you use Delphi XE2 or higher define an interface:
+{{{
+  IGeonamesClient = interface(IInvokable)
+    ['{055E3262-AA1E-43E7-90BC-7A1E84D0746D}']
+    [GET]
+    [Path('/neighboursJSON')]
+    [Consumes(MEDIA_TYPE.JSON)]
+    function GetNeighbours(geonameId: Int64; const username: string = 'demo'): TGeonames;
+  end;
+}}}
+
+As you see, our TGeonamesClient should inherit from TRESTClient class. If you are using XE2 or higher you only need to define your interface, there is no need to inherit from any other class. Attributes are used here to define various properties which our client will use, e.g. [Consumes(MEDIA_TYPE.JSON)] specifies that TRestClient will automatically deserialize recieved json string from the server into TGeonames instance, [GET] specifies that GET request will be used, [Path('/neighboursJSON')] specifies relative path.
 
 That's it. Now we just need to create our client and call it's GetNeighbours method (TRESTClient then execute HTTP GET request (URL: http://api.geonames.org/neighboursJSON?geonameId=597427&username=demo):
 {{{
@@ -74,6 +85,7 @@ var
   LGeoNames: TGeonames;
 begin
   LClient := TGeonamesClient.Create('http://api.geonames.org');
+  //XE2 LClient := TRESTClientVirtualInterface.Create(TypeInfo(IGeonamesClient), 'http://localhost', HTTP_CLIENT_INDY) as IGeonamesClient; 
   try
     LClient.SetHttpClient('idHttp');
     LGeoNames := LClient.GetNeighbours(597427, 'demo');
