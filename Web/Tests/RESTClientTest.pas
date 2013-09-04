@@ -5,6 +5,7 @@ interface
 uses
   TestFramework, HTTPClientInterface, Generics.Collections, Classes, Rtti, SvVMI, REST.Client
   ,HTTP.Attributes, REST.Method
+  {$IF CompilerVersion > 22} , REST.Client.VirtualInterface {$IFEND}
   ;
 
 type
@@ -15,7 +16,15 @@ type
     property Id: Integer read FId write FId;
   end;
 
-  TMockRestClient = class(TRESTClient<TWebEntity>)
+  ITestRESTClient = interface(IInvokable)
+    ['{055E3262-AA1E-43E7-90BC-7A1E84D0746D}']
+    [GET]
+    [Path('/Entities')]
+    [Consumes(MEDIA_TYPE.JSON)]
+    function GetEntity(AId: Integer): TWebEntity;
+  end;
+
+  TMockRestClient = class(TRESTClient)
   private
     FDoGetRequestResult: TValue;
   protected
@@ -49,18 +58,31 @@ type
     procedure ConsumeMediaTypeAsString;
   end;
 
+  {$IF CompilerVersion > 22} 
+  TestVirtualRESTClient = class(TTestCase)
+  private
+    FClient: ITestRESTClient;
+  public
+    procedure SetUp; override;
+    procedure TearDown; override;
+  published
+    procedure GetEntity();
+  end;
+  {$IFEND}
+
 implementation
 
 uses
   HTTPClient.Indy
   ,SysUtils
+  ,Web.Consts
   ;
 
 
 procedure TestTRESTClient.SetUp;
 begin
   FRESTClient := TMockRestClient.Create('http://localhost');
-  FRESTClient.SetHttpClient();
+  FRESTClient.SetHttpClient(HTTP_CLIENT_MOCK);
 end;
 
 procedure TestTRESTClient.TearDown;
@@ -229,7 +251,36 @@ begin
   Result.Id := AId;
 end;
 
+{$IF CompilerVersion > 22} 
+
+{ TestVirtualRESTClient }
+
+procedure TestVirtualRESTClient.GetEntity;
+var
+  LEntity: TWebEntity;
+begin
+  LEntity := FClient.GetEntity(2);
+  CheckTrue(LEntity = nil);
+end;
+
+procedure TestVirtualRESTClient.SetUp;
+begin
+  inherited;
+  FClient := TRESTClientVirtualInterface.Create(TypeInfo(ITestRestClient), 'http://localhost', HTTP_CLIENT_MOCK) as ITEstRestClient;
+end;
+
+procedure TestVirtualRESTClient.TearDown;
+begin
+  inherited;
+
+end;
+
+{$IFEND}
+
 initialization
   RegisterTest(TestTRESTClient.Suite);
+  {$IF CompilerVersion > 22} 
+  RegisterTest(TestVirtualRESTClient.Suite);
+  {$IFEND}
 end.
 

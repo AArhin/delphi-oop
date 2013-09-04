@@ -33,7 +33,8 @@ type
 implementation
 
 uses
-  HTTPClientFactory
+  HTTPClient.Factory
+  ,Web.Consts
   ;
 
 { TIndyHTTPClient }
@@ -98,6 +99,6 @@ begin
 end;
 
 initialization
-  THTTPClientFactory.RegisterHTTPClient('idHttp', TIndyHTTPClient);
+  THTTPClientFactory.RegisterHTTPClient(HTTP_CLIENT_INDY, TIndyHTTPClient);
 
 end.
