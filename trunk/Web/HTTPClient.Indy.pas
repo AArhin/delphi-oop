@@ -12,10 +12,13 @@ type
   TIndyHTTPClient = class(THTTPClient)
   private
     FClient: TIdHTTP;
-    FMediaType: MEDIA_TYPE;
+    FConsumeMediaType: MEDIA_TYPE;
+    FProduceMediaType: MEDIA_TYPE;
   protected
-    procedure SetMediaType(const AMediaType: MEDIA_TYPE); override;
-    function GetMediaType(): MEDIA_TYPE; override;
+    procedure SetConsumeMediaType(const AMediaType: MEDIA_TYPE); override;
+    function GetConsumeMediaType(): MEDIA_TYPE; override;
+    function GetProduceMediaType: MEDIA_TYPE; override;
+    procedure SetProduceMediaType(const Value: MEDIA_TYPE); override;
   public
     constructor Create(); override;
     destructor Destroy; override;
@@ -55,9 +58,14 @@ begin
   Result := FClient.ResponseCode;
 end;
 
-function TIndyHTTPClient.GetMediaType: MEDIA_TYPE;
+function TIndyHTTPClient.GetConsumeMediaType: MEDIA_TYPE;
 begin
-  Result := FMediaType;
+  Result := FConsumeMediaType;
+end;
+
+function TIndyHTTPClient.GetProduceMediaType: MEDIA_TYPE;
+begin
+  Result := FProduceMediaType;
 end;
 
 function TIndyHTTPClient.Post(const AUrl: string; AResponse, ASourceContent: TStream): Integer;
@@ -72,11 +80,16 @@ begin
   Result := FClient.ResponseCode;
 end;
 
-procedure TIndyHTTPClient.SetMediaType(const AMediaType: MEDIA_TYPE);
+procedure TIndyHTTPClient.SetConsumeMediaType(const AMediaType: MEDIA_TYPE);
 begin
-  FMediaType := AMediaType;
-  FClient.Request.Accept := MEDIA_TYPES[AMediaType];
-  FClient.Request.ContentType := MEDIA_TYPES[AMediaType];
+  FConsumeMediaType := AMediaType;
+  FClient.Request.Accept := MEDIA_TYPES[FConsumeMediaType];
+end;
+
+procedure TIndyHTTPClient.SetProduceMediaType(const Value: MEDIA_TYPE);
+begin
+  FProduceMediaType := Value;
+  FClient.Request.ContentType := MEDIA_TYPES[FProduceMediaType];
 end;
 
 initialization
