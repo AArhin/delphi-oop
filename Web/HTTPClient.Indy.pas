@@ -4,6 +4,7 @@ interface
 
 uses
   HTTPClient
+  ,HTTPClientInterface
   ,IdHTTP
   ,Classes
   ;
@@ -30,6 +31,10 @@ type
   end;
 
 implementation
+
+uses
+  HTTPClientFactory
+  ;
 
 { TIndyHTTPClient }
 

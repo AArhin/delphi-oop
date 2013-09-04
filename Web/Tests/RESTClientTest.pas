@@ -3,7 +3,9 @@ unit RESTClientTest;
 interface
 
 uses
-  TestFramework, HTTPClient, Generics.Collections, Classes, Rtti, SvVMI, REST.Client;
+  TestFramework, HTTPClientInterface, Generics.Collections, Classes, Rtti, SvVMI, REST.Client
+  ,HTTP.Attributes, REST.Method
+  ;
 
 type
   TWebEntity = class
