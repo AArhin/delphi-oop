@@ -99,7 +99,7 @@ type
     procedure DoOnAfter(Instance: TObject; Method: TRttiMethod;
       const Args: TArray<TValue>; var Result: TValue);
     procedure DoRequest(Method: TRttiMethod; const Args: TArray<TValue>; ARestMethod: TRESTMethod;
-      var Result: TValue);
+      var Result: TValue); virtual;
     procedure DoGetRequest(Method: TRttiMethod; const Args: TArray<TValue>; ARestMethod: TRESTMethod;
       var Result: TValue); virtual;
     procedure DoPostRequest(Method: TRttiMethod; const Args: TArray<TValue>; ARestMethod: TRESTMethod;
@@ -244,7 +244,6 @@ procedure TRESTClient<T>.DoGetRequest(Method: TRttiMethod; const Args: TArray<TV
   ARestMethod: TRESTMethod; var Result: TValue);
 var
   LResponse: TStringStream;
-  LDataString: string;
 begin
   LResponse := TStringStream.Create;
   try
