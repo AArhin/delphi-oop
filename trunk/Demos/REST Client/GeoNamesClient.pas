@@ -5,7 +5,8 @@ interface
 uses
   REST.Client
   ,Generics.Collections
-  ,HTTPClient
+  ,HTTPClientInterface
+  ,HTTP.Attributes
   ;
 
 type

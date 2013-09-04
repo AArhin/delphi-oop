@@ -4,96 +4,20 @@ interface
 
 uses
   Rtti
-  ,HTTPClient
+  ,HTTPClientInterface
+  ,REST.Method
   ,SvVMI
   ,Generics.Collections
   ,Classes
   ;
 
-
 type
-
-  GETAttribute = class(TCustomAttribute)
-  end;
-
-  POSTAttribute = class(TCustomAttribute)
-  end;
-
-  PUTAttribute = class(TCustomAttribute)
-  end;
-
-  DELETEAttribute = class(TCustomAttribute)
-  end;
-
-  QueryParamsAttribute = class(TCustomAttribute)
-  end;
-
-  FormParamsAttribute = class(TCustomAttribute)
-  end;
-
-  HeaderParamsAttribute = class(TCustomAttribute)
-  end;
-
-  PathAttribute = class(TCustomAttribute)
-  public
-    Path: string;
-  public
-    constructor Create(const APath: string);
-  end;
-
-  ProducesAttribute = class(TCustomAttribute)
-  public
-    MediaType: MEDIA_TYPE;
-  public
-    constructor Create(const AMediaType: MEDIA_TYPE);
-  end;
-
-  ConsumesAttribute = class(ProducesAttribute);
-
-  TRequestType = (rtGet, rtPost, rtPut, rtDelete);
-
-  TRESTMethodParameter = class
-  private
-    FName: string;
-    FValue: TValue;
-  public
-    function ToString(): string; reintroduce;
-
-    property Name: string read FName write FName;
-    property Value: TValue read FValue write FValue;
-  end;
-
-  TRESTMethod = class
-  private
-    FRequestType: TRequestType;
-    FName: string;
-    FPath: string;
-    FParameters: TObjectList<TRESTMethodParameter>;
-    FReturnValue: TValue;
-    FConsumeMediaType: MEDIA_TYPE;
-    FUrl: string;
-    FProduceMediaType: MEDIA_TYPE;
-  public
-    constructor Create(); virtual;
-    destructor Destroy; override;
-
-    property ConsumeMediaType: MEDIA_TYPE read FConsumeMediaType write FConsumeMediaType;
-    property ProduceMediaType: MEDIA_TYPE read FProduceMediaType write FProduceMediaType;
-    property Name: string read FName write FName;
-    property RequestType: TRequestType read FRequestType write FRequestType;
-    property Path: string read FPath write FPath;
-    property Parameters: TObjectList<TRESTMethodParameter> read FParameters;
-    property ReturnValue: TValue read FReturnValue write FReturnValue;
-    property Url: string read FUrl write FUrl;
-  end;
-
-
   TRESTClient<T: class> = class(TInterfacedObject)
   private
     FCtx: TRttiContext;
     FURL: string;
     FVMI: TSvVirtualMethodInterceptor;
-    FHttp: THTTPClient;
+    FHttp: IHTTPClient;
     FMethods: TObjectDictionary<Pointer,TRESTMethod>;
   protected
     procedure DoOnAfter(Instance: TObject; Method: TRttiMethod;
@@ -122,7 +46,7 @@ type
 
     procedure SetHttpClient(const AHttpClientName: string = 'idHttp');
 
-    property HttpClient: THTTPClient read FHttp;
+    property HttpClient: IHTTPClient read FHttp write FHttp;
     property Url: string read FURL;
   end;
 
@@ -135,6 +59,8 @@ uses
   ,SysUtils
   ,SysConst
   ,StrUtils
+  ,HTTPClientFactory
+  ,HTTP.Attributes
   ;
 
 { TRESTClient }
@@ -201,8 +127,6 @@ end;
 
 destructor TRESTClient<T>.Destroy;
 begin
-  if Assigned(FHttp) then
-    FHttp.Free;
   FMethods.Free;
   FVMI.Unproxify(Self);
   FVMI.Free;
@@ -497,48 +421,8 @@ end;
 
 procedure TRESTClient<T>.SetHttpClient(const AHttpClientName: string);
 begin
-  if Assigned(FHttp) then
-    FreeAndNil(FHttp);
-
   FHttp := THTTPClientFactory.GetInstance(AHttpClientName);
 end;
 
-{ TRESTMethodParameter }
-
-function TRESTMethodParameter.ToString: string;
-begin
-  Result := FValue.ToString;
-end;
-
-{ TRESTMethod }
-
-constructor TRESTMethod.Create;
-begin
-  inherited Create();
-  FParameters := TObjectList<TRESTMethodParameter>.Create(True);
-  FReturnValue := TValue.Empty;
-end;
-
-destructor TRESTMethod.Destroy;
-begin
-  FParameters.Free;
-  inherited Destroy;
-end;
-
-{ PathAttribute }
-
-constructor PathAttribute.Create(const APath: string);
-begin
-  inherited Create;
-  Path := APath;
-end;
-
-{ ProducesAttribute }
-
-constructor ProducesAttribute.Create(const AMediaType: MEDIA_TYPE);
-begin
-  inherited Create();
-  MediaType := AMediaType;
-end;
 
 end.
