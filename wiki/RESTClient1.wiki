@@ -56,7 +56,7 @@ type
 Define our client:
 
 {{{  
-  TGeonamesClient = class(TRESTClient<geoname>)
+  TGeonamesClient = class(TRESTClient)
   public
     [GET]
     [Consumes(MEDIA_TYPE.JSON)]
