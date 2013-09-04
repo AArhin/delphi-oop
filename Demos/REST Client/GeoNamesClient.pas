@@ -76,6 +76,8 @@ type
     [Consumes(MEDIA_TYPE.JSON)]
     function GetNeighbours(geonameId: Int64; const username: string = 'demo'): TGeonames; virtual;
     [POST]
+    [Produces(MEDIA_TYPE.JSON)]
+    [Consumes(MEDIA_TYPE.JSON)]
     function GetStatus(AMessage: TStatusMessage): TStatusMessage; virtual;
 
   end;

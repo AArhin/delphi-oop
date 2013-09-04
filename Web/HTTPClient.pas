@@ -20,8 +20,10 @@ type
 
   THTTPClient = class(TInterfacedObject)
   protected
-    procedure SetMediaType(const AMediaType: MEDIA_TYPE); virtual; abstract;
-    function GetMediaType(): MEDIA_TYPE; virtual; abstract;
+    procedure SetConsumeMediaType(const AMediaType: MEDIA_TYPE); virtual; abstract;
+    function GetConsumeMediaType(): MEDIA_TYPE; virtual; abstract;
+    function GetProduceMediaType: MEDIA_TYPE; virtual; abstract;
+    procedure SetProduceMediaType(const Value: MEDIA_TYPE); virtual; abstract;
   public
     constructor Create(); virtual;
 
@@ -30,7 +32,8 @@ type
     function Post(const AUrl: string; AResponse: TStream; ASourceContent: TStream): Integer; virtual; abstract;
     function Put(const AUrl: string; AResponse: TStream; ASourceContent: TStream): Integer; virtual; abstract;
 
-    property MediaType: MEDIA_TYPE read GetMediaType write SetMediaType;
+    property ConsumeMediaType: MEDIA_TYPE read GetConsumeMediaType write SetConsumeMediaType;
+    property ProduceMediaType: MEDIA_TYPE read GetProduceMediaType write SetProduceMediaType;
   end;
 
   TConstructorFunc = reference to function(): THTTPClient;
@@ -89,5 +92,6 @@ constructor THTTPClient.Create;
 begin
   inherited Create;
 end;
+
 
 end.

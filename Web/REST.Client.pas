@@ -70,13 +70,15 @@ type
     FPath: string;
     FParameters: TObjectList<TRESTMethodParameter>;
     FReturnValue: TValue;
-    FMediaType: MEDIA_TYPE;
+    FConsumeMediaType: MEDIA_TYPE;
     FUrl: string;
+    FProduceMediaType: MEDIA_TYPE;
   public
     constructor Create(); virtual;
     destructor Destroy; override;
 
-    property MediaType: MEDIA_TYPE read FMediaType write FMediaType;
+    property ConsumeMediaType: MEDIA_TYPE read FConsumeMediaType write FConsumeMediaType;
+    property ProduceMediaType: MEDIA_TYPE read FProduceMediaType write FProduceMediaType;
     property Name: string read FName write FName;
     property RequestType: TRequestType read FRequestType write FRequestType;
     property Path: string read FPath write FPath;
@@ -145,7 +147,7 @@ begin
     if ARttiType.IsInstance then
     begin
       Result := ARttiType.AsInstance.MetaclassType.Create;
-      case ARestMethod.MediaType of
+      case ARestMethod.ConsumeMediaType of
         MEDIA_TYPE.JSON: TSvSerializer.DeSerializeObject(Result.AsObject, GetSerializedDataString(ASource, ARestMethod), sstSuperJson);
         MEDIA_TYPE.XML: TSvSerializer.DeSerializeObject(Result.AsObject, GetSerializedDataString(ASource, ARestMethod), sstNativeXML);
       end;
@@ -295,7 +297,8 @@ end;
 procedure TRESTClient<T>.DoRequest(Method: TRttiMethod; const Args: TArray<TValue>; ARestMethod: TRESTMethod;
   var Result: TValue);
 begin
-  FHttp.MediaType := ARestMethod.MediaType;
+  FHttp.ConsumeMediaType := ARestMethod.ConsumeMediaType;
+  FHttp.ProduceMediaType := ARestMethod.ProduceMediaType;
   ARestMethod.Url := GenerateUrl(ARestMethod);
 
   case ARestMethod.RequestType of
@@ -428,8 +431,10 @@ begin
       Result.RequestType := rtDelete
     else if LAttr is PathAttribute then
       Result.Path := PathAttribute(LAttr).Path
+    else if LAttr is ProducesAttribute then
+      Result.ProduceMediaType := ProducesAttribute(LAttr).MediaType
     else if LAttr is ConsumesAttribute then
-      Result.MediaType := ConsumesAttribute(LAttr).MediaType;
+      Result.ConsumeMediaType := ConsumesAttribute(LAttr).MediaType;
   end;
 
   for LParam in AMethod.GetParameters do
@@ -485,7 +490,7 @@ end;
 function TRESTClient<T>.SerializeObjectToString(AObject: TObject; ARestMethod: TRESTMethod): string;
 begin
   Result := '';
-  case ARestMethod.MediaType of
+  case ARestMethod.ProduceMediaType of
     MEDIA_TYPE.JSON: TSvSerializer.SerializeObject(AObject, Result, sstSuperJson);
     MEDIA_TYPE.XML: TSvSerializer.SerializeObject(AObject, Result, sstNativeXML);
   end;
