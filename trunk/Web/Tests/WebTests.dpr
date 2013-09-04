@@ -14,9 +14,11 @@ uses
   RESTClientTest in 'RESTClientTest.pas',
   REST.Client in '..\REST.Client.pas',
   HTTPClientInterface in '..\HTTPClientInterface.pas',
-  HTTPClientFactory in '..\HTTPClientFactory.pas',
+  HTTPClient.Factory in '..\HTTPClient.Factory.pas',
   HTTP.Attributes in '..\HTTP.Attributes.pas',
-  REST.Method in '..\REST.Method.pas';
+  REST.Method in '..\REST.Method.pas',
+  Web.Consts in '..\Web.Consts.pas',
+  HTTPClient.Mock in '..\HTTPClient.Mock.pas';
 
 {$R *.RES}
 

@@ -6,19 +6,23 @@ uses
   Rtti
   ,HTTPClientInterface
   ,REST.Method
+  ,Web.Consts
   ,SvVMI
   ,Generics.Collections
   ,Classes
+  ,TypInfo
   ;
 
 type
-  TRESTClient<T: class> = class(TInterfacedObject)
+  TRESTClient = class(TInterfacedObject)
   private
     FCtx: TRttiContext;
     FURL: string;
     FVMI: TSvVirtualMethodInterceptor;
     FHttp: IHTTPClient;
     FMethods: TObjectDictionary<Pointer,TRESTMethod>;
+    FProxyObject: TObject;
+    FProxyTypeInfo: PTypeInfo;
   protected
     procedure DoOnAfter(Instance: TObject; Method: TRttiMethod;
       const Args: TArray<TValue>; var Result: TValue);
@@ -41,10 +45,10 @@ type
     function ConsumeMediaType(ARttiType: TRttiType; const ASource: TValue; ARestMethod: TRESTMethod): TValue; virtual;
     function ConsumeMediaTypeAsString(ARttiType: TRttiType; const ASource: TValue; ARestMethod: TRESTMethod): string; virtual;
   public
-    constructor Create(const AUrl: string); virtual;
+    constructor Create(const AUrl: string; AProxyObject: TObject = nil; AProxyType: PTypeInfo = nil); virtual;
     destructor Destroy; override;
 
-    procedure SetHttpClient(const AHttpClientName: string = 'idHttp');
+    procedure SetHttpClient(const AHttpClientName: string = HTTP_CLIENT_INDY);
 
     property HttpClient: IHTTPClient read FHttp write FHttp;
     property Url: string read FURL;
@@ -59,13 +63,13 @@ uses
   ,SysUtils
   ,SysConst
   ,StrUtils
-  ,HTTPClientFactory
+  ,HTTPClient.Factory
   ,HTTP.Attributes
   ;
 
 { TRESTClient }
 
-function TRESTClient<T>.ConsumeMediaType(ARttiType: TRttiType; const ASource: TValue; ARestMethod: TRESTMethod): TValue;
+function TRESTClient.ConsumeMediaType(ARttiType: TRttiType; const ASource: TValue; ARestMethod: TRESTMethod): TValue;
 begin
   Result := TValue.Empty;
   if ARttiType <> nil then
@@ -83,7 +87,7 @@ begin
   end;
 end;
 
-function TRESTClient<T>.ConsumeMediaTypeAsString(ARttiType: TRttiType; const ASource: TValue;
+function TRESTClient.ConsumeMediaTypeAsString(ARttiType: TRttiType; const ASource: TValue;
   ARestMethod: TRESTMethod): string;
 begin
   Result := '';
@@ -98,13 +102,21 @@ begin
   end;
 end;
 
-constructor TRESTClient<T>.Create(const AUrl: string);
+constructor TRESTClient.Create(const AUrl: string; AProxyObject: TObject = nil; AProxyType: PTypeInfo = nil);
 begin
   inherited Create();
+  FProxyObject := AProxyObject;
+  if FProxyObject = nil then
+    FProxyObject := Self;
+
+  FProxyTypeInfo := AProxyType;
+  if FProxyTypeInfo = nil then
+    FProxyTypeInfo := Self.ClassInfo;
+
   FCtx := TRttiContext.Create;
   FURL := AUrl;
   FHttp := nil;
-  FVMI := TSvVirtualMethodInterceptor.Create(Self.ClassType);
+  FVMI := TSvVirtualMethodInterceptor.Create(FProxyObject.ClassType);
   FMethods := TObjectDictionary<Pointer,TRESTMethod>.Create([doOwnsValues]);
 
   FVMI.OnBefore := procedure(Instance: TObject;
@@ -122,18 +134,18 @@ begin
     end;}
 
   EnumerateRESTMethods();
-  FVMI.Proxify(Self);
+  FVMI.Proxify(FProxyObject);
 end;
 
-destructor TRESTClient<T>.Destroy;
+destructor TRESTClient.Destroy;
 begin
   FMethods.Free;
-  FVMI.Unproxify(Self);
+  FVMI.Unproxify(FProxyObject);
   FVMI.Free;
   inherited Destroy;
 end;
 
-function TRESTClient<T>.DoCheckPathParameters(const AUrl: string; ARestMethod: TRESTMethod): string;
+function TRESTClient.DoCheckPathParameters(const AUrl: string; ARestMethod: TRESTMethod): string;
 var
   i: Integer;
   LPosTokenStart, LPosTokenEnd: Integer;
@@ -164,7 +176,7 @@ begin
   end;
 end;
 
-procedure TRESTClient<T>.DoGetRequest(Method: TRttiMethod; const Args: TArray<TValue>;
+procedure TRESTClient.DoGetRequest(Method: TRttiMethod; const Args: TArray<TValue>;
   ARestMethod: TRESTMethod; var Result: TValue);
 var
   LResponse: TStringStream;
@@ -183,7 +195,7 @@ begin
   end;
 end;
 
-procedure TRESTClient<T>.DoOnAfter(Instance: TObject; Method: TRttiMethod; const Args: TArray<TValue>;
+procedure TRESTClient.DoOnAfter(Instance: TObject; Method: TRttiMethod; const Args: TArray<TValue>;
   var Result: TValue);
 var
   LMethod: TRESTMethod;
@@ -195,7 +207,7 @@ begin
   DoRequest(Method, Args, LMethod, Result);
 end;
 
-procedure TRESTClient<T>.DoPostRequest(Method: TRttiMethod; const Args: TArray<TValue>;
+procedure TRESTClient.DoPostRequest(Method: TRttiMethod; const Args: TArray<TValue>;
   ARestMethod: TRESTMethod; var Result: TValue);
 var
   LResponse: TStringStream;
@@ -217,7 +229,7 @@ begin
   end;
 end;
 
-procedure TRESTClient<T>.DoRequest(Method: TRttiMethod; const Args: TArray<TValue>; ARestMethod: TRESTMethod;
+procedure TRESTClient.DoRequest(Method: TRttiMethod; const Args: TArray<TValue>; ARestMethod: TRESTMethod;
   var Result: TValue);
 begin
   FHttp.ConsumeMediaType := ARestMethod.ConsumeMediaType;
@@ -232,7 +244,7 @@ begin
   end;
 end;
 
-procedure TRESTClient<T>.EnumerateRESTMethods;
+procedure TRESTClient.EnumerateRESTMethods;
 var
   LType: TRttiType;
   LMethod: TRttiMethod;
@@ -240,7 +252,7 @@ var
 begin
   FMethods.Clear;
 
-  LType := FCtx.GetType(Self.ClassType);
+  LType := FCtx.GetType(FProxyTypeInfo);
   for LMethod in LType.GetMethods do
   begin
     if IsMethodMarked(LMethod) then
@@ -259,7 +271,7 @@ begin
   end;
 end;
 
-procedure TRESTClient<T>.FillRestMethodParameters(const Args: TArray<TValue>; ARestMethod: TRESTMethod; AMethod: TRttiMethod);
+procedure TRESTClient.FillRestMethodParameters(const Args: TArray<TValue>; ARestMethod: TRESTMethod; AMethod: TRttiMethod);
 var
   i: Integer;
   LParameters: TArray<TRttiParameter>;
@@ -271,7 +283,7 @@ begin
   end;
 end;
 
-function TRESTClient<T>.GenerateSourceContent(ARestMethod: TRESTMethod): TStream;
+function TRESTClient.GenerateSourceContent(ARestMethod: TRESTMethod): TStream;
 var
   LParams: TStringList;
   i: Integer;
@@ -290,7 +302,7 @@ begin
   end;
 end;
 
-function TRESTClient<T>.GenerateUrl(ARestMethod: TRESTMethod): string;
+function TRESTClient.GenerateUrl(ARestMethod: TRESTMethod): string;
 var
   i: Integer;
 begin
@@ -315,7 +327,7 @@ begin
   end;
 end;
 
-function TRESTClient<T>.GetRequestType(AMethod: TRttiMethod): TRequestType;
+function TRESTClient.GetRequestType(AMethod: TRttiMethod): TRequestType;
 var
   LAttrib: TCustomAttribute;
 begin
@@ -333,7 +345,7 @@ begin
   Result := rtGet;
 end;
 
-function TRESTClient<T>.GetRESTMethod(AMethod: TRttiMethod): TRESTMethod;
+function TRESTClient.GetRESTMethod(AMethod: TRttiMethod): TRESTMethod;
 var
   LAttr: TCustomAttribute;
   LParam: TRttiParameter;
@@ -368,7 +380,7 @@ begin
   end;
 end;
 
-function TRESTClient<T>.GetSerializedDataString(const AValue: TValue; ARestMethod: TRESTMethod): string;
+function TRESTClient.GetSerializedDataString(const AValue: TValue; ARestMethod: TRESTMethod): string;
 var
   LObject: TObject;
 begin
@@ -396,7 +408,7 @@ begin
   end;
 end;
 
-function TRESTClient<T>.IsMethodMarked(AMethod: TRttiMethod): Boolean;
+function TRESTClient.IsMethodMarked(AMethod: TRttiMethod): Boolean;
 var
   LAttrib: TCustomAttribute;
 begin
@@ -410,7 +422,7 @@ begin
   Result := False;
 end;
 
-function TRESTClient<T>.SerializeObjectToString(AObject: TObject; ARestMethod: TRESTMethod): string;
+function TRESTClient.SerializeObjectToString(AObject: TObject; ARestMethod: TRESTMethod): string;
 begin
   Result := '';
   case ARestMethod.ProduceMediaType of
@@ -419,7 +431,7 @@ begin
   end;
 end;
 
-procedure TRESTClient<T>.SetHttpClient(const AHttpClientName: string);
+procedure TRESTClient.SetHttpClient(const AHttpClientName: string);
 begin
   FHttp := THTTPClientFactory.GetInstance(AHttpClientName);
 end;

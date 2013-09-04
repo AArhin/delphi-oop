@@ -1,4 +1,4 @@
-unit HTTPClientFactory;
+unit HTTPClient.Factory;
 
 interface
 
