@@ -48,7 +48,7 @@ type
     destructor Destroy; override;
 
     property totalResultsCount: Integer read FtotalResultsCount write FtotalResultsCount;
-    property geonames: TSvObjectList<geoname> read Fgeonames write Fgeonames;
+    property geonames: TObjectList<geoname> read Fgeonames write Fgeonames;
   end;
 
 }}}
