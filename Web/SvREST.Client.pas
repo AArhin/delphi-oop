@@ -1,11 +1,11 @@
-unit REST.Client;
+unit SvREST.Client;
 
 interface
 
 uses
   Rtti
-  ,HTTPClientInterface
-  ,REST.Method
+  ,SvHTTPClientInterface
+  ,SvREST.Method
   ,SvWeb.Consts
   ,SvVMI
   ,Generics.Collections
@@ -65,8 +65,8 @@ uses
   ,SysUtils
   ,SysConst
   ,StrUtils
-  ,HTTPClient.Factory
-  ,HTTP.Attributes
+  ,SvHTTPClient.Factory
+  ,SvHTTP.Attributes
   ;
 
 { TRESTClient }

@@ -1,9 +1,9 @@
-unit REST.Method;
+unit SvREST.Method;
 
 interface
 
 uses
-  HTTPClientInterface
+  SvHTTPClientInterface
   ,Generics.Collections
   ,Rtti
   ;

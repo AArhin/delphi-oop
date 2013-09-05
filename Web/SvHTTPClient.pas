@@ -1,10 +1,10 @@
-unit HTTPClient;
+unit SvHTTPClient;
 
 interface
 
 uses
   Classes
-  ,HTTPClientInterface
+  ,SvHTTPClientInterface
   ;
 
 type

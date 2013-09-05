@@ -3,10 +3,10 @@ unit GeoNamesClient;
 interface
 
 uses
-  REST.Client
+  SvREST.Client
   ,Generics.Collections
-  ,HTTPClientInterface
-  ,HTTP.Attributes
+  ,SvHTTPClientInterface
+  ,SvHTTP.Attributes
   ;
 
 type

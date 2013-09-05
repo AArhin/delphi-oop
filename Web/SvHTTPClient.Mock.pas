@@ -1,10 +1,10 @@
-unit HTTPClient.Mock;
+unit SvHTTPClient.Mock;
 
 interface
 
 uses
-  HTTPClient
-  ,HTTPClientInterface
+  SvHTTPClient
+  ,SvHTTPClientInterface
   ,Classes
   ;
 
@@ -31,7 +31,7 @@ type
 implementation
 
 uses
-  HTTPClient.Factory
+  SvHTTPClient.Factory
   ,SvWeb.Consts
   ;
 

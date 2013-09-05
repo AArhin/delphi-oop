@@ -1,10 +1,10 @@
-unit HTTPClient.Indy;
+unit SvHTTPClient.Indy;
 
 interface
 
 uses
-  HTTPClient
-  ,HTTPClientInterface
+  SvHTTPClient
+  ,SvHTTPClientInterface
   ,IdHTTP
   ,Classes
   ;
@@ -35,7 +35,7 @@ type
 implementation
 
 uses
-  HTTPClient.Factory
+  SvHTTPClient.Factory
   ,IdSSLOpenSSL
   ,SvWeb.Consts
 //  ,IdIOHandler

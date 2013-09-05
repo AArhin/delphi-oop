@@ -12,13 +12,13 @@ uses
   TextTestRunner,
   SvTesting.DUnit,
   RESTClientTest in 'RESTClientTest.pas',
-  REST.Client in '..\REST.Client.pas',
-  HTTPClientInterface in '..\HTTPClientInterface.pas',
-  HTTPClient.Factory in '..\HTTPClient.Factory.pas',
-  HTTP.Attributes in '..\HTTP.Attributes.pas',
-  REST.Method in '..\REST.Method.pas',
+  SvREST.Client in '..\SvREST.Client.pas',
+  SvHTTPClientInterface in '..\SvHTTPClientInterface.pas',
+  SvHTTPClient.Factory in '..\SvHTTPClient.Factory.pas',
+  SvHTTP.Attributes in '..\SvHTTP.Attributes.pas',
+  SvREST.Method in '..\SvREST.Method.pas',
   SvWeb.Consts in '..\SvWeb.Consts.pas',
-  HTTPClient.Mock in '..\HTTPClient.Mock.pas';
+  SvHTTPClient.Mock in '..\SvHTTPClient.Mock.pas';
 
 {$R *.RES}
 

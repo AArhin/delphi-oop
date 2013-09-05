@@ -1,4 +1,4 @@
-unit HTTPClientInterface;
+unit SvHTTPClientInterface;
 
 interface
 
