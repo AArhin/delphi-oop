@@ -22,6 +22,8 @@ type
     function Post(const AUrl: string; AResponse: TStream; ASourceContent: TStream): Integer; virtual; abstract;
     function Put(const AUrl: string; AResponse: TStream; ASourceContent: TStream): Integer; virtual; abstract;
 
+    procedure SetUpHttps(); virtual; abstract;
+
     property ConsumeMediaType: MEDIA_TYPE read GetConsumeMediaType write SetConsumeMediaType;
     property ProduceMediaType: MEDIA_TYPE read GetProduceMediaType write SetProduceMediaType;
   end;

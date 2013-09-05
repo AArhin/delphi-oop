@@ -4,11 +4,37 @@ program RESTClient;
 
 uses
   SysUtils,
+  Web.Consts,
   GeoNamesClient in 'GeoNamesClient.pas',
   HTTPClient.Indy {/registers Indy Http client},
-  SvVMI in '..\..\Core\SvVMI.pas';
+  SvVMI in '..\..\Core\SvVMI.pas',
+  USAJobsClient in 'USAJobsClient.pas';
 
 //use with Delphi XE2 or higher for best compatibility
+
+procedure PrintJobs();
+var
+  LJobsClient: TUSAJobsClient;
+  LJobs: TJobs;
+  LJob: TJobData;
+begin
+  LJobsClient := TUSAJobsClient.Create('https://data.usajobs.gov/api');
+  try
+    LJobsClient.SetHttpClient(HTTP_CLIENT_INDY);
+    LJobs := LJobsClient.GetITJobs();
+    try
+      Writeln(Format('Total IT jobs: %D', [LJobs.TotalJobs]) );
+      for LJob in LJobs.JobData do
+      begin
+        Writeln(Format('%S - %S ', [LJob.JobTitle, LJob.OrganizationName]));
+      end;
+    finally
+      LJobs.Free;
+    end;
+  finally
+    LJobsClient.Free;
+  end;
+end;
 
 procedure Main();
 var
@@ -48,6 +74,9 @@ begin
   finally
     LClient.Free;
   end;
+
+  //jobs
+  PrintJobs();
 end;
 
 var
