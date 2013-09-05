@@ -23,6 +23,7 @@ type
     FMethods: TObjectDictionary<Pointer,TRESTMethod>;
     FProxyObject: TObject;
     FProxyTypeInfo: PTypeInfo;
+    FDoInvokeMethods: Boolean;
   protected
     procedure DoOnAfter(Instance: TObject; Method: TRttiMethod;
       const Args: TArray<TValue>; var Result: TValue);
@@ -32,11 +33,14 @@ type
       var Result: TValue); virtual;
     procedure DoPostRequest(Method: TRttiMethod; const Args: TArray<TValue>; ARestMethod: TRESTMethod;
       var Result: TValue); virtual;
+    procedure DoPutRequest(Method: TRttiMethod; const Args: TArray<TValue>; ARestMethod: TRESTMethod;
+      var Result: TValue); virtual;
+    procedure DoDeleteRequest(ARestMethod: TRESTMethod; var Result: TValue); virtual;
     function IsMethodMarked(AMethod: TRttiMethod): Boolean;
-    function GetRESTMethod(AMethod: TRttiMethod): TRESTMethod;
+    function GetRESTMethod(AMethod: TRttiMethod; AType: TRttiType): TRESTMethod;
     function GetRequestType(AMethod: TRttiMethod): TRequestType;
     procedure EnumerateRESTMethods();
-    function GenerateUrl(ARestMethod: TRESTMethod): string;
+    function GenerateUrl(ARestMethod: TRESTMethod): string; virtual;
     function DoCheckPathParameters(const AUrl: string; ARestMethod: TRESTMethod): string;
     function GenerateSourceContent(ARestMethod: TRESTMethod): TStream;
     function GetSerializedDataString(const AValue: TValue; ARestMethod: TRESTMethod): string;
@@ -52,6 +56,7 @@ type
 
     function IsHttps(): Boolean;
 
+    property DoInvokeMethods: Boolean read FDoInvokeMethods write FDoInvokeMethods;
     property HttpClient: IHTTPClient read FHttp write FHttp;
     property Url: string read FURL;
   end;
@@ -125,7 +130,7 @@ begin
     Method: TRttiMethod; const Args: TArray<TValue>; out DoInvoke: Boolean;
     out Result: TValue)
     begin
-      DoInvoke := False;
+      DoInvoke := FDoInvokeMethods;
       DoOnAfter(Instance, Method, Args, Result);
     end;
 
@@ -178,6 +183,11 @@ begin
   end;
 end;
 
+procedure TRESTClient.DoDeleteRequest(ARestMethod: TRESTMethod; var Result: TValue);
+begin
+  Result := FHttp.Delete(ARestMethod.Url);
+end;
+
 procedure TRESTClient.DoGetRequest(Method: TRttiMethod; const Args: TArray<TValue>;
   ARestMethod: TRESTMethod; var Result: TValue);
 var
@@ -185,7 +195,7 @@ var
 begin
   LResponse := TStringStream.Create;
   try
-    if (FHttp.Get(ARestMethod.Url, LResponse) = 200)  then
+    if (FHttp.Get(ARestMethod.Url, LResponse) = HTTP_RESPONSE_OK)  then
     begin
       if LResponse.Size > 0 then
       begin
@@ -205,7 +215,6 @@ begin
   if not FMethods.TryGetValue(Method.Handle, LMethod) then
     Exit;
 
-  FillRestMethodParameters(Args, LMethod, Method);
   DoRequest(Method, Args, LMethod, Result);
 end;
 
@@ -218,7 +227,29 @@ begin
   LResponse := TStringStream.Create;
   LSourceContent := GenerateSourceContent(ARestMethod);
   try
-    if (FHttp.Post(ARestMethod.Url, LResponse, LSourceContent) = 200) then
+    if (FHttp.Post(ARestMethod.Url, LResponse, LSourceContent) = HTTP_RESPONSE_OK) then
+    begin
+      if LResponse.Size > 0 then
+      begin
+        Result := ConsumeMediaType(Method.ReturnType, LResponse, ARestMethod);
+      end;
+    end;
+  finally
+    LSourceContent.Free;
+    LResponse.Free;
+  end;
+end;
+
+procedure TRESTClient.DoPutRequest(Method: TRttiMethod;
+  const Args: TArray<TValue>; ARestMethod: TRESTMethod; var Result: TValue);
+var
+  LResponse: TStringStream;
+  LSourceContent: TStream;
+begin
+  LResponse := TStringStream.Create;
+  LSourceContent := GenerateSourceContent(ARestMethod);
+  try
+    if (FHttp.Put(ARestMethod.Url, LResponse, LSourceContent) = HTTP_RESPONSE_OK) then
     begin
       if LResponse.Size > 0 then
       begin
@@ -234,6 +265,7 @@ end;
 procedure TRESTClient.DoRequest(Method: TRttiMethod; const Args: TArray<TValue>; ARestMethod: TRESTMethod;
   var Result: TValue);
 begin
+  FillRestMethodParameters(Args, ARestMethod, Method);
   FHttp.ConsumeMediaType := ARestMethod.ConsumeMediaType;
   FHttp.ProduceMediaType := ARestMethod.ProduceMediaType;
   ARestMethod.Url := GenerateUrl(ARestMethod);
@@ -241,8 +273,8 @@ begin
   case ARestMethod.RequestType of
     rtGet: DoGetRequest(Method, Args, ARestMethod, Result);
     rtPost: DoPostRequest(Method, Args, ARestMethod, Result);
-    rtPut: ;
-    rtDelete: ;
+    rtPut: DoPutRequest(Method, Args, ARestMethod, Result);
+    rtDelete: DoDeleteRequest(ARestMethod, Result);
   end;
 end;
 
@@ -259,7 +291,7 @@ begin
   begin
     if IsMethodMarked(LMethod) then
     begin
-      FMethods.Add(LMethod.Handle, GetRESTMethod(LMethod));
+      FMethods.Add(LMethod.Handle, GetRESTMethod(LMethod, LType));
     end;
   end;
 
@@ -347,7 +379,7 @@ begin
   Result := rtGet;
 end;
 
-function TRESTClient.GetRESTMethod(AMethod: TRttiMethod): TRESTMethod;
+function TRESTClient.GetRESTMethod(AMethod: TRttiMethod; AType: TRttiType): TRESTMethod;
 var
   LAttr: TCustomAttribute;
   LParam: TRttiParameter;
@@ -355,6 +387,24 @@ var
 begin
   Result := TRESTMethod.Create;
   Result.Name := AMethod.Name;
+
+  for LParam in AMethod.GetParameters do
+  begin
+    LRestParam := TRESTMethodParameter.Create;
+    LRestParam.Name := LParam.Name;
+    Result.Parameters.Add(LRestParam);
+  end;
+
+  for LAttr in AType.GetAttributes do
+  begin
+    if LAttr.ClassType = QueryParamNameValueAttribute then
+    begin
+      LRestParam := TRESTMethodParameter.Create;
+      LRestParam.Name := QueryParamNameValueAttribute(LAttr).Name;
+      LRestParam.Value := QueryParamNameValueAttribute(LAttr).Value;
+      Result.Parameters.Add(LRestParam);
+    end;
+  end;
 
   for LAttr in AMethod.GetAttributes do
   begin
@@ -371,14 +421,14 @@ begin
     else if LAttr.ClassType = ConsumesAttribute then
       Result.ConsumeMediaType := ConsumesAttribute(LAttr).MediaType
     else if LAttr.ClassType = ProducesAttribute then
-      Result.ProduceMediaType := ProducesAttribute(LAttr).MediaType;
-  end;
-
-  for LParam in AMethod.GetParameters do
-  begin
-    LRestParam := TRESTMethodParameter.Create;
-    LRestParam.Name := LParam.Name;
-    Result.Parameters.Add(LRestParam);
+      Result.ProduceMediaType := ProducesAttribute(LAttr).MediaType
+    else if LAttr.ClassType = QueryParamNameValueAttribute then
+    begin
+      LRestParam := TRESTMethodParameter.Create;
+      LRestParam.Name := QueryParamNameValueAttribute(LAttr).Name;
+      LRestParam.Value := QueryParamNameValueAttribute(LAttr).Value;
+      Result.Parameters.Add(LRestParam);
+    end;
   end;
 end;
 

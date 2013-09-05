@@ -65,6 +65,8 @@
         <DCCReference Include="..\SvREST.Method.pas"/>
         <DCCReference Include="..\SvWeb.Consts.pas"/>
         <DCCReference Include="..\SvHTTPClient.Mock.pas"/>
+        <DCCReference Include="..\SvHTTPClient.Indy.pas"/>
+        <DCCReference Include="RESTClientIntegrationTest.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>
