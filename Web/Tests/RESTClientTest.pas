@@ -101,7 +101,7 @@ var
 begin
   LMethod := TRttiContext.Create.GetType(FRESTClient.ClassType).GetMethod('GetEntity');
   Args := TArray<TValue>.Create(1);
-  LRestMethod := FRESTClient.GetRESTMethod(LMethod);
+  LRestMethod := FRESTClient.GetRESTMethod(LMethod, TRttiContext.Create.GetType(FRESTClient.ClassType));
   LEntity := TWebEntity.Create;
   try
     LEntity.Id := 2;
@@ -138,7 +138,7 @@ var
   LArgs: TArray<TValue>;
 begin
   LMethod := TRttiContext.Create.GetType(FRESTClient.ClassType).GetMethod('GetEntity');
-  LRestMethod := FRESTClient.GetRESTMethod(LMethod);
+  LRestMethod := FRESTClient.GetRESTMethod(LMethod, TRttiContext.Create.GetType(FRESTClient.ClassType));
   try
     LArgs := TArray<TValue>.Create(1);
     FRESTClient.FillRestMethodParameters(LArgs, LRestMethod, LMethod);
@@ -158,7 +158,7 @@ var
   LArgs: TArray<TValue>;
 begin
   LMethod := TRttiContext.Create.GetType(FRESTClient.ClassType).GetMethod('GetEntity');
-  LRestMethod := FRESTClient.GetRESTMethod(LMethod);
+  LRestMethod := FRESTClient.GetRESTMethod(LMethod, TRttiContext.Create.GetType(FRESTClient.ClassType));
   try
     AUrl := 'http://localhost/Entities?{AId}';
     LArgs := TArray<TValue>.Create(1);
@@ -180,7 +180,7 @@ var
   LStringStream: TStringList;
 begin
   LMethod := TRttiContext.Create.GetType(FRESTClient.ClassType).GetMethod('GetEntity');
-  LRestMethod := FRESTClient.GetRESTMethod(LMethod);
+  LRestMethod := FRESTClient.GetRESTMethod(LMethod, TRttiContext.Create.GetType(FRESTClient.ClassType));
   try
     LArgs := TArray<TValue>.Create(1);
     FRESTClient.FillRestMethodParameters(LArgs, LRestMethod, LMethod);
@@ -209,7 +209,7 @@ var
   LValue: string;
 begin
   LMethod := TRttiContext.Create.GetType(FRESTClient.ClassType).GetMethod('GetEntity');
-  LRestMethod := FRESTClient.GetRESTMethod(LMethod);
+  LRestMethod := FRESTClient.GetRESTMethod(LMethod, TRttiContext.Create.GetType(FRESTClient.ClassType));
   try
     LArgs := TArray<TValue>.Create(1);
     FRESTClient.FillRestMethodParameters(LArgs, LRestMethod, LMethod);
@@ -228,7 +228,7 @@ var
   LRestMethod: TRESTMethod;
 begin
   LMethod := TRttiContext.Create.GetType(FRESTClient.ClassType).GetMethod('GetEntity');
-  LRestMethod := FRESTClient.GetRESTMethod(LMethod);
+  LRestMethod := FRESTClient.GetRESTMethod(LMethod, TRttiContext.Create.GetType(FRESTClient.ClassType));
   try
     ReturnValue := FRESTClient.ConsumeMediaTypeAsString(LMethod.GetParameters[0].ParamType, 2, LRestMethod);
     CheckEquals('2', ReturnValue);

@@ -19,13 +19,20 @@ type
   DELETEAttribute = class(TCustomAttribute)
   end;
 
-  QueryParamsAttribute = class(TCustomAttribute)
+  QueryParamAttribute = class(TCustomAttribute)
   end;
 
-  FormParamsAttribute = class(TCustomAttribute)
+  QueryParamNameValueAttribute = class(TCustomAttribute)
+  public
+    Name: string;
+    Value: string;
+    constructor Create(const AName, AValue: string); virtual;
   end;
 
-  HeaderParamsAttribute = class(TCustomAttribute)
+  FormParamAttribute = class(TCustomAttribute)
+  end;
+
+  HeaderParamAttribute = class(TCustomAttribute)
   end;
 
   PathAttribute = class(TCustomAttribute)
@@ -60,6 +67,15 @@ constructor PathAttribute.Create(const APath: string);
 begin
   inherited Create;
   Path := APath;
+end;
+
+{ QueryParamNameValueAttribute }
+
+constructor QueryParamNameValueAttribute.Create(const AName, AValue: string);
+begin
+  inherited Create();
+  Name := AName;
+  Value := AValue;
 end;
 
 end.

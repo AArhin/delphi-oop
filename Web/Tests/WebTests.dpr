@@ -18,7 +18,9 @@ uses
   SvHTTP.Attributes in '..\SvHTTP.Attributes.pas',
   SvREST.Method in '..\SvREST.Method.pas',
   SvWeb.Consts in '..\SvWeb.Consts.pas',
-  SvHTTPClient.Mock in '..\SvHTTPClient.Mock.pas';
+  SvHTTPClient.Mock in '..\SvHTTPClient.Mock.pas',
+  SvHTTPClient.Indy in '..\SvHTTPClient.Indy.pas',
+  RESTClientIntegrationTest in 'RESTClientIntegrationTest.pas';
 
 {$R *.RES}
 
