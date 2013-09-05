@@ -8,9 +8,9 @@ In this example we will show you how to consume GeoNames.org RESTful web service
 First, define your GeoNames types:
 {{{
 uses
-  REST.Client
+  SvREST.Client
   ,Generics.Collections
-  ,HTTPClient
+  ,SvHTTP.Attributes
   ;
 
 type
