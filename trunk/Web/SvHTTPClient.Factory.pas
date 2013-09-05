@@ -1,10 +1,10 @@
-unit HTTPClient.Factory;
+unit SvHTTPClient.Factory;
 
 interface
 
 uses
-  HTTPClientInterface
-  ,HTTPClient
+  SvHTTPClientInterface
+  ,SvHTTPClient
   ,Generics.Collections
   ;
 

@@ -3,9 +3,9 @@ unit RESTClientTest;
 interface
 
 uses
-  TestFramework, HTTPClientInterface, Generics.Collections, Classes, Rtti, SvVMI, REST.Client
-  ,HTTP.Attributes, REST.Method
-  {$IF CompilerVersion > 22} , REST.Client.VirtualInterface {$IFEND}
+  TestFramework, SvHTTPClientInterface, Generics.Collections, Classes, Rtti, SvVMI, SvREST.Client
+  ,SvHTTP.Attributes, SvREST.Method
+  {$IF CompilerVersion > 22} , SvREST.Client.VirtualInterface {$IFEND}
   ;
 
 type
@@ -73,7 +73,7 @@ type
 implementation
 
 uses
-  HTTPClient.Indy
+  SvHTTPClient.Indy
   ,SysUtils
   ,SvWeb.Consts
   ;

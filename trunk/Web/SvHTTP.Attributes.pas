@@ -1,9 +1,9 @@
-unit HTTP.Attributes;
+unit SvHTTP.Attributes;
 
 interface
 
 uses
-  HTTPClientInterface
+  SvHTTPClientInterface
   ;
 
 type

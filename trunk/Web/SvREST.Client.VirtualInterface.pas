@@ -1,12 +1,12 @@
-unit REST.Client.VirtualInterface;
+unit SvREST.Client.VirtualInterface;
 
 interface
 
 uses
   Rtti
   ,TypInfo
-  ,REST.Client
-  ,Web.Consts
+  ,SvREST.Client
+  ,SvWeb.Consts
   ;
 
 type

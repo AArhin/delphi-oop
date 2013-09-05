@@ -6,7 +6,7 @@ uses
   SysUtils,
   SvWeb.Consts,
   GeoNamesClient in 'GeoNamesClient.pas',
-  HTTPClient.Indy {/registers Indy Http client},
+  SvHTTPClient.Indy {/registers Indy Http client},
   SvVMI in '..\..\Core\SvVMI.pas',
   USAJobsClient in 'USAJobsClient.pas';
 
