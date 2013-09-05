@@ -29,6 +29,8 @@ type
     function GetProduceMediaType: MEDIA_TYPE;
     procedure SetProduceMediaType(const Value: MEDIA_TYPE);
 
+    procedure SetUpHttps();
+
     property ConsumeMediaType: MEDIA_TYPE read GetConsumeMediaType write SetConsumeMediaType;
     property ProduceMediaType: MEDIA_TYPE read GetProduceMediaType write SetProduceMediaType;
   end;

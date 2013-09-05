@@ -50,6 +50,8 @@ type
 
     procedure SetHttpClient(const AHttpClientName: string = HTTP_CLIENT_INDY);
 
+    function IsHttps(): Boolean;
+
     property HttpClient: IHTTPClient read FHttp write FHttp;
     property Url: string read FURL;
   end;
@@ -366,10 +368,10 @@ begin
       Result.RequestType := rtDelete
     else if LAttr is PathAttribute then
       Result.Path := PathAttribute(LAttr).Path
-    else if LAttr is ProducesAttribute then
-      Result.ProduceMediaType := ProducesAttribute(LAttr).MediaType
-    else if LAttr is ConsumesAttribute then
-      Result.ConsumeMediaType := ConsumesAttribute(LAttr).MediaType;
+    else if LAttr.ClassType = ConsumesAttribute then
+      Result.ConsumeMediaType := ConsumesAttribute(LAttr).MediaType
+    else if LAttr.ClassType = ProducesAttribute then
+      Result.ProduceMediaType := ProducesAttribute(LAttr).MediaType;
   end;
 
   for LParam in AMethod.GetParameters do
@@ -408,6 +410,11 @@ begin
   end;
 end;
 
+function TRESTClient.IsHttps: Boolean;
+begin
+  Result := StartsText('https', FURL);
+end;
+
 function TRESTClient.IsMethodMarked(AMethod: TRttiMethod): Boolean;
 var
   LAttrib: TCustomAttribute;
@@ -434,6 +441,8 @@ end;
 procedure TRESTClient.SetHttpClient(const AHttpClientName: string);
 begin
   FHttp := THTTPClientFactory.GetInstance(AHttpClientName);
+  if IsHttps then
+    FHttp.SetUpHttps();
 end;
 
 

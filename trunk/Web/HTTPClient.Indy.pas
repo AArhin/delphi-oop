@@ -28,6 +28,8 @@ type
     function Get(const AUrl: string; AResponse: TStream): Integer; override;
     function Post(const AUrl: string; AResponse: TStream; ASourceContent: TStream): Integer; override;
     function Put(const AUrl: string; AResponse: TStream; ASourceContent: TStream): Integer; override;
+
+    procedure SetUpHttps(); override;
   end;
 
 implementation
@@ -35,6 +37,11 @@ implementation
 uses
   HTTPClient.Factory
   ,Web.Consts
+  ,IdSSLOpenSSL
+  ,IdIOHandler
+  ,IdIOHandlerSocket
+  ,IdIOHandlerStack
+  ,IdSSL
   ;
 
 { TIndyHTTPClient }
@@ -96,6 +103,15 @@ procedure TIndyHTTPClient.SetProduceMediaType(const Value: MEDIA_TYPE);
 begin
   FProduceMediaType := Value;
   FClient.Request.ContentType := MEDIA_TYPES[FProduceMediaType];
+end;
+
+procedure TIndyHTTPClient.SetUpHttps;
+var
+  LHandler: TIdSSLIOHandlerSocketOpenSSL;
+begin
+  inherited;
+  LHandler := TIdSSLIOHandlerSocketOpenSSL.Create(FClient);
+  FClient.IOHandler := LHandler;
 end;
 
 initialization
