@@ -75,7 +75,7 @@ implementation
 uses
   HTTPClient.Indy
   ,SysUtils
-  ,Web.Consts
+  ,SvWeb.Consts
   ;
 
 

@@ -36,12 +36,12 @@ implementation
 
 uses
   HTTPClient.Factory
-  ,Web.Consts
   ,IdSSLOpenSSL
-  ,IdIOHandler
-  ,IdIOHandlerSocket
-  ,IdIOHandlerStack
-  ,IdSSL
+  ,SvWeb.Consts
+//  ,IdIOHandler
+ // ,IdIOHandlerSocket
+ // ,IdIOHandlerStack
+//  ,IdSSL
   ;
 
 { TIndyHTTPClient }

@@ -6,7 +6,7 @@ uses
   Rtti
   ,HTTPClientInterface
   ,REST.Method
-  ,Web.Consts
+  ,SvWeb.Consts
   ,SvVMI
   ,Generics.Collections
   ,Classes

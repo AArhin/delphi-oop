@@ -1,4 +1,4 @@
-unit Web.Consts;
+unit SvWeb.Consts;
 
 interface
 
@@ -9,3 +9,4 @@ const
 implementation
 
 end.
+
