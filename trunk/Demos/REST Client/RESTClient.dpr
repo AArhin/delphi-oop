@@ -4,7 +4,7 @@ program RESTClient;
 
 uses
   SysUtils,
-  Web.Consts,
+  SvWeb.Consts,
   GeoNamesClient in 'GeoNamesClient.pas',
   HTTPClient.Indy {/registers Indy Http client},
   SvVMI in '..\..\Core\SvVMI.pas',

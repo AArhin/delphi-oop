@@ -17,7 +17,7 @@ uses
   HTTPClient.Factory in '..\HTTPClient.Factory.pas',
   HTTP.Attributes in '..\HTTP.Attributes.pas',
   REST.Method in '..\REST.Method.pas',
-  Web.Consts in '..\Web.Consts.pas',
+  SvWeb.Consts in '..\SvWeb.Consts.pas',
   HTTPClient.Mock in '..\HTTPClient.Mock.pas';
 
 {$R *.RES}
