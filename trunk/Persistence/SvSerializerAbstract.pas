@@ -193,6 +193,7 @@ begin
   FFormatSettings := TFormatSettings.Create;
   FFormatSettings.DecimalSeparator := '.';
   FFormatSettings.ShortDateFormat := 'yyyy-mm-dd';
+  FFormatSettings.LongDateFormat := 'yyyy-mm-dd hh:mm:ss';
   FFormatSettings.DateSeparator := '-';
   FOldFormatSettings := FormatSettings;
 end;
