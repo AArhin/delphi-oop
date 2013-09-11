@@ -671,7 +671,8 @@ begin
   strInput:= TStringStream.Create(FValue);
   strOutput:= TStringStream.Create;
   try
-    Zipper:= TZCompressionStream.Create(strOutput, TZCompressionLevel(ACompressionLevel) {$IF CompilerVersion > 22} , 128 {$IFEND});
+    //Zipper:= TZCompressionStream.Create(strOutput, TZCompressionLevel(ACompressionLevel) {$IF CompilerVersion > 22} , 128 {$IFEND});
+    Zipper:= TZCompressionStream.Create(TCompressionLevel(ACompressionLevel),strOutput);
     try
       Zipper.CopyFrom(strInput, strInput.Size);
     finally
@@ -1154,7 +1155,7 @@ var
 begin
   AMd5 := TIdHashMessageDigest5.Create();
   try
-    Result := SysUtils.LowerCase(AMd5.HashStringAsHex(FValue, TEncoding.UTF8));
+    Result := SysUtils.LowerCase(AMd5.HashStringAsHex(FValue, {$IF CompilerVersion > 24} IndyTextEncoding_UTF8(){$ELSE}  TEncoding.UTF8 {$IFEND} ));
   finally
     AMd5.Free;
   end;
@@ -1537,11 +1538,11 @@ end;
 function TSvString.ToBin: string;
 begin
   if FValue = '' then
-  begin
-    Result := '';
+  begin
+    Result := '';
     Exit;
   end;
-  SetLength(Result, System.Length(FValue) div 4);
+  SetLength(Result, System.Length(FValue) div 4);
   HexToBin(PWideChar(FValue), Result[1], System.Length(FValue) div SizeOf(Char));
 end;
 
@@ -1880,14 +1881,14 @@ end;
 function TSvString.ToHex: string;
 var
   s1: string;
-begin
-  if FValue = '' then
-  begin
-    Result := '';
+begin
+  if FValue = '' then
+  begin
+    Result := '';
     Exit;
   end;
-  s1 := FValue;
-  SetLength(Result, System.Length(s1) * 4);
+  s1 := FValue;
+  SetLength(Result, System.Length(s1) * 4);
   BinToHex(s1[1], PWideChar(Result), System.Length(s1) * SizeOf(Char));
 end;
 
