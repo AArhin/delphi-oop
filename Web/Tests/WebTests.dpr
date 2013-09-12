@@ -20,7 +20,12 @@ uses
   SvWeb.Consts in '..\SvWeb.Consts.pas',
   SvHTTPClient.Mock in '..\SvHTTPClient.Mock.pas',
   SvHTTPClient.Indy in '..\SvHTTPClient.Indy.pas',
-  RESTClientIntegrationTest in 'RESTClientIntegrationTest.pas';
+  RESTClientIntegrationTest in 'RESTClientIntegrationTest.pas',
+  SvHTTP.Authentication in '..\SvHTTP.Authentication.pas',
+  SvHTTP.Authentication.OAuth in '..\SvHTTP.Authentication.OAuth.pas',
+  GoogleOAuthTest in 'GoogleOAuthTest.pas',
+  SvHTTP.Authentication.Google in '..\SvHTTP.Authentication.Google.pas',
+  SvHTTP.AuthDialog in '..\SvHTTP.AuthDialog.pas' {frmAuthDialog};
 
 {$R *.RES}
 

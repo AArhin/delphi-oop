@@ -24,6 +24,8 @@ type
     FProxyObject: TObject;
     FProxyTypeInfo: PTypeInfo;
     FDoInvokeMethods: Boolean;
+    FAuthentication: IHttpAuthentication;
+    FEncodeParameters: Boolean;
   protected
     procedure DoOnAfter(Instance: TObject; Method: TRttiMethod;
       const Args: TArray<TValue>; var Result: TValue);
@@ -48,6 +50,9 @@ type
     procedure FillRestMethodParameters(const Args: TArray<TValue>; ARestMethod: TRESTMethod; AMethod: TRttiMethod);
     function ConsumeMediaType(ARttiType: TRttiType; const ASource: TValue; ARestMethod: TRESTMethod): TValue; virtual;
     function ConsumeMediaTypeAsString(ARttiType: TRttiType; const ASource: TValue; ARestMethod: TRESTMethod): string; virtual;
+    function UrlEncode(const S: string): string; virtual;
+    function UrlEncodeRFC3986(const URL: string): string; virtual;
+    function HasAuthentication(): Boolean; virtual;
   public
     constructor Create(const AUrl: string; AProxyObject: TObject = nil; AProxyType: PTypeInfo = nil); virtual;
     destructor Destroy; override;
@@ -56,6 +61,8 @@ type
 
     function IsHttps(): Boolean;
 
+    property Authentication: IHttpAuthentication read FAuthentication write FAuthentication;
+    property EncodeParameters: Boolean read FEncodeParameters write FEncodeParameters;
     property DoInvokeMethods: Boolean read FDoInvokeMethods write FDoInvokeMethods;
     property HttpClient: IHTTPClient read FHttp write FHttp;
     property Url: string read FURL;
@@ -268,6 +275,13 @@ begin
   FillRestMethodParameters(Args, ARestMethod, Method);
   FHttp.ConsumeMediaType := ARestMethod.ConsumeMediaType;
   FHttp.ProduceMediaType := ARestMethod.ProduceMediaType;
+
+  if HasAuthentication then
+  begin
+    FHttp.ClearCustomRequestHeaders();
+    FHttp.AddCustomRequestHeader(FAuthentication.GetCustomRequestHeader);
+  end;
+
   ARestMethod.Url := GenerateUrl(ARestMethod);
 
   case ARestMethod.RequestType of
@@ -319,26 +333,31 @@ end;
 
 function TRESTClient.GenerateSourceContent(ARestMethod: TRESTMethod): TStream;
 var
-  LParams: TStringList;
   i: Integer;
+  LParamValue, LParamName: string;
 begin
-  Result := TMemoryStream.Create;
-  LParams := TStringList.Create;
-  try
-    for i := 0 to ARestMethod.Parameters.Count - 1 do
+  Result := TStringStream.Create('', TEncoding.UTF8);
+  for i := 0 to ARestMethod.Parameters.Count - 1 do
+  begin
+    if i <> 0 then
+      TStringStream(Result).WriteString('&');
+
+    LParamValue := ARestMethod.Parameters[i].ToString;
+    LParamName := ARestMethod.Parameters[i].Name;
+    if FEncodeParameters then
     begin
-      LParams.Add(Format('"%S"="%S"'
-        , [ARestMethod.Parameters[i].Name, ARestMethod.Parameters[i].ToString]));
+      LParamName := UrlEncodeRFC3986(LParamName);
+      LParamValue := UrlEncodeRFC3986(LParamValue);
     end;
-    LParams.SaveToStream(Result, TEncoding.UTF8);
-  finally
-    LParams.Free;
+    TStringStream(Result).WriteString(Format('%S=%S',
+      [LParamName, LParamValue]));
   end;
 end;
 
 function TRESTClient.GenerateUrl(ARestMethod: TRESTMethod): string;
 var
   i: Integer;
+  LParamValue, LParamName: string;
 begin
   Result := FURL;
   if ARestMethod.Path <> '' then
@@ -357,7 +376,15 @@ begin
     if i <> 0 then
       Result := Result + '&';
 
-    Result := Result + Format('%S=%S', [ARestMethod.Parameters[i].Name, ARestMethod.Parameters[i].ToString]);
+    LParamName := ARestMethod.Parameters[i].Name;
+    LParamValue := ARestMethod.Parameters[i].ToString;
+    if FEncodeParameters then
+    begin
+      LParamName := UrlEncodeRFC3986(LParamName);
+      LParamValue := UrlEncodeRFC3986(LParamValue);
+    end;
+
+    Result := Result + Format('%S=%S', [LParamName, LParamValue]);
   end;
 end;
 
@@ -460,6 +487,11 @@ begin
   end;
 end;
 
+function TRESTClient.HasAuthentication: Boolean;
+begin
+  Result := Assigned(FAuthentication) and (FAuthentication.DoAuthenticate);
+end;
+
 function TRESTClient.IsHttps: Boolean;
 begin
   Result := StartsText('https', FURL);
@@ -495,5 +527,31 @@ begin
     FHttp.SetUpHttps();
 end;
 
+
+function TRESTClient.UrlEncode(const S: string): string;
+var
+  Ch : Char;
+begin
+  Result := '';
+  for Ch in S do
+  begin
+    if ((Ch >= '0') and (Ch <= '9')) or
+       ((Ch >= 'a') and (Ch <= 'z')) or
+       ((Ch >= 'A') and (Ch <= 'Z')) or
+       (Ch = '.') or (Ch = '-') or (Ch = '_') or (Ch = '~') then
+      Result := Result + Ch
+    else
+      Result := Result + '%' + SysUtils.IntToHex(Ord(Ch), 2);
+  end;
+end;
+
+function TRESTClient.UrlEncodeRFC3986(const URL: string): string;
+var
+  URL1: string;
+begin
+  URL1 := URLEncode(URL);
+  URL1 := StringReplace(URL1, '', '+', [rfReplaceAll, rfIgnoreCase]);
+  Result := URL1;
+end;
 
 end.
