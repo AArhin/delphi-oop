@@ -190,7 +190,7 @@ begin
       LStream.Position := 0;
       LStringStream.LoadFromStream(LStream);
 
-      CheckEquals('"AId"="1"', LStringStream[0]);
+      CheckEquals('AId=1', LStringStream[0]);
     finally
       LStream.Free;
       LStringStream.Free;

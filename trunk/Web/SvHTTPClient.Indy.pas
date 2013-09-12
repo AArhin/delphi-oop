@@ -6,6 +6,8 @@ uses
   SvHTTPClient
   ,SvHTTPClientInterface
   ,IdHTTP
+  ,idHeaderList
+  ,IdComponent
   ,Classes
   ;
 
@@ -20,9 +22,13 @@ type
     function GetConsumeMediaType(): MEDIA_TYPE; override;
     function GetProduceMediaType: MEDIA_TYPE; override;
     procedure SetProduceMediaType(const Value: MEDIA_TYPE); override;
+    procedure DoStatus (ASender: TObject; const AStatus: TIdStatus; const AStatusText: string);
   public
     constructor Create(); override;
     destructor Destroy; override;
+
+    procedure AddCustomRequestHeader(const AHeaderValue: string); override;
+    procedure ClearCustomRequestHeaders(); override;
 
     function Delete(const AUrl: string): Integer; override;
     function Get(const AUrl: string; AResponse: TStream): Integer; override;
@@ -46,11 +52,24 @@ uses
 
 { TIndyHTTPClient }
 
+procedure TIndyHTTPClient.AddCustomRequestHeader(const AHeaderValue: string);
+begin
+  FClient.Request.CustomHeaders.Add(AHeaderValue);
+end;
+
+procedure TIndyHTTPClient.ClearCustomRequestHeaders;
+begin
+  FClient.Request.CustomHeaders.Clear;
+end;
+
 constructor TIndyHTTPClient.Create;
 begin
   inherited Create();
   FClient := TIdHTTP.Create(nil);
-  FClient.Request.ContentEncoding := 'utf-8';
+  FClient.HTTPOptions := FClient.HTTPOptions - [hoForceEncodeParams];
+  FClient.AllowCookies := False;
+ // FClient.Request.AcceptEncoding := 'gzip,deflate';
+  FClient.OnStatus := DoStatus;
 end;
 
 function TIndyHTTPClient.Delete(const AUrl: string): Integer;
@@ -63,6 +82,28 @@ destructor TIndyHTTPClient.Destroy;
 begin
   FClient.Free;
   inherited Destroy;
+end;
+
+procedure TIndyHTTPClient.DoStatus(ASender: TObject; const AStatus: TIdStatus;
+  const AStatusText: string);
+begin
+  case AStatus of
+    hsResolving: ;
+    hsConnecting:
+    begin
+      //
+    end;
+    hsConnected:
+    begin
+      //
+    end;
+    hsDisconnecting: ;
+    hsDisconnected: ;
+    hsStatusText: ;
+    ftpTransfer: ;
+    ftpReady: ;
+    ftpAborted: ;
+  end;
 end;
 
 function TIndyHTTPClient.Get(const AUrl: string; AResponse: TStream): Integer;
@@ -103,6 +144,10 @@ procedure TIndyHTTPClient.SetProduceMediaType(const Value: MEDIA_TYPE);
 begin
   FProduceMediaType := Value;
   FClient.Request.ContentType := MEDIA_TYPES[FProduceMediaType];
+  if (FProduceMediaType in [MEDIA_TYPE.JSON, MEDIA_TYPE.XML]) then
+  begin
+    FClient.Request.ContentEncoding := 'utf-8';
+  end;
 end;
 
 procedure TIndyHTTPClient.SetUpHttps;

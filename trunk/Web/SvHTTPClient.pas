@@ -17,6 +17,9 @@ type
   public
     constructor Create(); virtual;
 
+    procedure AddCustomRequestHeader(const AHeaderValue: string); virtual; abstract;
+    procedure ClearCustomRequestHeaders(); virtual; abstract;
+
     function Delete(const AUrl: string): Integer; virtual; abstract;
     function Get(const AUrl: string; AResponse: TStream): Integer; virtual; abstract;
     function Post(const AUrl: string; AResponse: TStream; ASourceContent: TStream): Integer; virtual; abstract;
