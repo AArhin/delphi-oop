@@ -23,12 +23,16 @@ type
     function GetProduceMediaType: MEDIA_TYPE; override;
     procedure SetProduceMediaType(const Value: MEDIA_TYPE); override;
     procedure DoStatus (ASender: TObject; const AStatus: TIdStatus; const AStatusText: string);
+
   public
     constructor Create(); override;
     destructor Destroy; override;
 
-    procedure AddCustomRequestHeader(const AHeaderValue: string); override;
+    procedure SetCustomRequestHeader(const AHeaderValue: string); override;
     procedure ClearCustomRequestHeaders(); override;
+
+    function GetLastResponseCode(): Integer; override;
+    function GetLastResponseText(): string; override;
 
     function Delete(const AUrl: string): Integer; override;
     function Get(const AUrl: string; AResponse: TStream): Integer; override;
@@ -44,6 +48,7 @@ uses
   SvHTTPClient.Factory
   ,IdSSLOpenSSL
   ,SvWeb.Consts
+  ,SysUtils
 //  ,IdIOHandler
  // ,IdIOHandlerSocket
  // ,IdIOHandlerStack
@@ -52,9 +57,21 @@ uses
 
 { TIndyHTTPClient }
 
-procedure TIndyHTTPClient.AddCustomRequestHeader(const AHeaderValue: string);
+procedure TIndyHTTPClient.SetCustomRequestHeader(const AHeaderValue: string);
+var
+  LIndex, LOldIndex: Integer;
+  LHeaderName: string;
 begin
-  FClient.Request.CustomHeaders.Add(AHeaderValue);
+  LIndex := FClient.Request.CustomHeaders.Add(AHeaderValue);
+  LHeaderName := FClient.Request.CustomHeaders.Names[LIndex];
+  //remove old values with this header name
+  for LOldIndex := LIndex-1 downto 0 do
+  begin
+    if SameText(LHeaderName, FClient.Request.CustomHeaders.Names[LOldIndex]) then
+    begin
+      FClient.Request.CustomHeaders.Delete(LOldIndex);
+    end;
+  end;
 end;
 
 procedure TIndyHTTPClient.ClearCustomRequestHeaders;
@@ -115,6 +132,16 @@ end;
 function TIndyHTTPClient.GetConsumeMediaType: MEDIA_TYPE;
 begin
   Result := FConsumeMediaType;
+end;
+
+function TIndyHTTPClient.GetLastResponseCode: Integer;
+begin
+  Result := FClient.ResponseCode;
+end;
+
+function TIndyHTTPClient.GetLastResponseText: string;
+begin
+  Result := FClient.ResponseText;
 end;
 
 function TIndyHTTPClient.GetProduceMediaType: MEDIA_TYPE;

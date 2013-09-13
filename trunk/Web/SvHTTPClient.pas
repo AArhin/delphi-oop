@@ -17,7 +17,7 @@ type
   public
     constructor Create(); virtual;
 
-    procedure AddCustomRequestHeader(const AHeaderValue: string); virtual; abstract;
+    procedure SetCustomRequestHeader(const AHeaderValue: string); virtual; abstract;
     procedure ClearCustomRequestHeaders(); virtual; abstract;
 
     function Delete(const AUrl: string): Integer; virtual; abstract;
@@ -26,6 +26,8 @@ type
     function Put(const AUrl: string; AResponse: TStream; ASourceContent: TStream): Integer; virtual; abstract;
 
     procedure SetUpHttps(); virtual; abstract;
+    function GetLastResponseCode(): Integer; virtual; abstract;
+    function GetLastResponseText(): string; virtual; abstract;
 
     property ConsumeMediaType: MEDIA_TYPE read GetConsumeMediaType write SetConsumeMediaType;
     property ProduceMediaType: MEDIA_TYPE read GetProduceMediaType write SetProduceMediaType;

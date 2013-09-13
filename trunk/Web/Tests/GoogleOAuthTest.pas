@@ -60,8 +60,11 @@ procedure TGoogleOAuthTest.Authenticate_And_GetMe;
 var
   LPerson: TGooglePlusPerson;
 begin
-  FGoogleAuth.AccessToken := 'ya29.AHES6ZRNVFM6dfGmuEd8w6l2MDlbYlATDZDrYyCwyA7Econj';
+  FGoogleAuth.AccessToken := 'ya29.AHES6ZSEuqCTbIavTdo9OL4Az-VSgi3lxyf-x5iEbZbey5pTPw';
   FGoogleAuth.RefreshToken := '1/5pElECbO_RwX8gZoUdCV3SB9i1fH366vb6uXwSbfvNE';
+  FGoogleAuth.ClientSecret := 'secret';
+  FGoogleAuth.ClientId := 'id';
+  FGoogleAuth.RedirectUri := 'uri';
 
   CheckTrue( FGoogleAuth.DoAuthenticate );
 

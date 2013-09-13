@@ -19,7 +19,7 @@ const
 type
   IHttpAuthentication = interface(IInvokable)
     ['{6E58F0D0-1DDC-478E-8EFA-E810BC2960FD}']
-    function DoAuthenticate(): Boolean;
+    function DoAuthenticate(ARefreshAuthentication: Boolean = False): Boolean;
     function GetCustomRequestHeader(): string;
   end;
 
@@ -30,13 +30,16 @@ type
     function Post(const AUrl: string; AResponse: TStream; ASourceContent: TStream): Integer;
     function Put(const AUrl: string; AResponse: TStream; ASourceContent: TStream): Integer;
 
-    procedure AddCustomRequestHeader(const AHeaderValue: string);
+    procedure SetCustomRequestHeader(const AHeaderValue: string);
     procedure ClearCustomRequestHeaders();
 
     procedure SetConsumeMediaType(const AMediaType: MEDIA_TYPE);
     function GetConsumeMediaType(): MEDIA_TYPE;
     function GetProduceMediaType: MEDIA_TYPE;
     procedure SetProduceMediaType(const Value: MEDIA_TYPE);
+
+    function GetLastResponseCode(): Integer;
+    function GetLastResponseText(): string;
 
     procedure SetUpHttps();
 

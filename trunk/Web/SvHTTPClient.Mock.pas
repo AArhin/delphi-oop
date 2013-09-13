@@ -22,7 +22,7 @@ type
     constructor Create(); override;
     destructor Destroy; override;
 
-    procedure AddCustomRequestHeader(const AHeaderValue: string); override;
+    procedure SetCustomRequestHeader(const AHeaderValue: string); override;
     procedure ClearCustomRequestHeaders(); override;
 
     function Delete(const AUrl: string): Integer; override;
@@ -41,7 +41,7 @@ uses
 
 { TMockHttpClient }
 
-procedure TMockHttpClient.AddCustomRequestHeader(const AHeaderValue: string);
+procedure TMockHttpClient.SetCustomRequestHeader(const AHeaderValue: string);
 begin
   inherited;
 end;

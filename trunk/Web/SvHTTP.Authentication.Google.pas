@@ -7,7 +7,7 @@ uses
   ;
 
 type
-  TSvGoogleAuth = class(TSvOAuth)
+  TSvGoogleAuth = class(TSvOAuth2)
   protected
     function GetAccessURL(): string; override;
     function GetTokenAccessURL(): string; override;
@@ -16,7 +16,7 @@ type
     constructor Create(); override;
 
     function GetCustomRequestHeader(): string; override;
-    function DoAuthenticate(): Boolean; override;
+    function DoAuthenticate(ARefreshAuthentication: Boolean = False): Boolean; override;
   end;
 
 implementation
@@ -44,9 +44,9 @@ begin
   RedirectUri := URI_REDIRECT;
 end;
 
-function TSvGoogleAuth.DoAuthenticate: Boolean;
+function TSvGoogleAuth.DoAuthenticate(ARefreshAuthentication: Boolean): Boolean;
 begin
-  Result := inherited DoAuthenticate();
+  Result := inherited DoAuthenticate(ARefreshAuthentication);
 end;
 
 function TSvGoogleAuth.EncodeParams: Boolean;
