@@ -38,7 +38,12 @@ type
     {$WARNINGS ON}
   end;
 
-  TSvOAuth = class(TSvAuthentication)
+  {$REGION 'Documentation'}
+  ///	<summary>
+  ///	  Base class implementing OAuth 2.0 authentication.
+  ///	</summary>
+  {$ENDREGION}
+  TSvOAuth2 = class(TSvAuthentication)
   private
     FAccessToken: string;
     FRefreshToken: string;
@@ -46,8 +51,8 @@ type
     FClientSecret: string;
     FScope: string;
     FRedirectUri: string;
-    FResponseType: string;
-    FState: string;
+    FTokenType: string;
+  //  FState: string;
     FResponseCode: string;
     FExpiresIn: Integer;
   protected
@@ -60,19 +65,89 @@ type
     destructor Destroy; override;
 
     function GetCustomRequestHeader(): string; override;
-    function DoAuthenticate(): Boolean; override;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Indicates that authentication should be executed. Basically you
+    ///	  <b>never</b> need to call DoAuthenticate(True) because Clients will
+    ///	  refresh tokens automatically.
+    ///	</summary>
+    {$ENDREGION}
+    function DoAuthenticate(ARefreshAuthentication: Boolean = False): Boolean; override;
 
 
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Represents access token which will be used to authenticate all
+    ///	  further requests. Save this value safely. It is retrieved after
+    ///	  DoAuthenticate() call if it's successful.
+    ///	</summary>
+    {$ENDREGION}
     property AccessToken: string read FAccessToken write FAccessToken;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Indicates the client that is making the request. The value passed in
+    ///	  this parameter must exactly match the value shown in the APIs Console.
+    ///	</summary>
+    {$ENDREGION}
     property ClientId: string read FClientId write FClientId;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Represents ClientSecret which should be obtained from the API
+    ///	  provider.
+    ///	</summary>
+    {$ENDREGION}
     property ClientSecret: string read FClientSecret write FClientSecret;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  The remaining lifetime on the access token.
+    ///	</summary>
+    {$ENDREGION}
     property ExpiresIn: Integer read FExpiresIn write FExpiresIn;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Represents scope value. Scope is space delimited set of permissions
+    ///	  the application requests.
+    ///	</summary>
+    {$ENDREGION}
     property Scope: string read FScope write FScope;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Represents RedirectUri value. It's one of the redirect_uri values
+    ///	  registered at the APIs Console.
+    ///	</summary>
+    {$ENDREGION}
     property RedirectUri: string read FRedirectUri write FRedirectUri;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Represents RefreshToken. It is obtained after first successful
+    ///	  authorization and should be kept safely for later use. It is used
+    ///	  when access token expires.
+    ///	</summary>
+    {$ENDREGION}
     property RefreshToken: string read FRefreshToken write FRefreshToken;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Represents ResponseCode which user retrieves after logging in into
+    ///	  it's application and should pasted into the our dialog's edit box.
+    ///	</summary>
+    {$ENDREGION}
     property ResponseCode: string read FResponseCode write FResponseCode;
-    property ResponseType: string read FResponseType write FResponseType;
-    property State: string read FState write FState;
+
+    {$REGION 'Documentation'}
+    ///	<summary>
+    ///	  Represents server used authorization type .
+    ///	</summary>
+    {$ENDREGION}
+    property TokenType: string read FTokenType write FTokenType;
+  //  property State: string read FState write FState;
 
   end;
 
@@ -96,24 +171,26 @@ const
 
 { TSvOAuth }
 
-constructor TSvOAuth.Create;
+constructor TSvOAuth2.Create;
 begin
   inherited Create;
   FRedirectUri := DEF_REDIRECT_URI;
-  FResponseType := DEF_RESPONSE_TYPE;
+  FTokenType := DEF_RESPONSE_TYPE;
 end;
 
-destructor TSvOAuth.Destroy;
+destructor TSvOAuth2.Destroy;
 begin
 
   inherited Destroy;
 end;
 
-function TSvOAuth.DoAuthenticate: Boolean;
+function TSvOAuth2.DoAuthenticate(ARefreshAuthentication: Boolean): Boolean;
 var
   LClient: TRequestAccessClient;
   LResponseModel: TOAuthAccessResponseModel;
 begin
+  if ARefreshAuthentication then
+    FAccessToken := '';
   Result := (FAccessToken <> '');
 
   if not Result then
@@ -122,7 +199,19 @@ begin
     LClient.SetHttpClient(HTTP_CLIENT_INDY);
     LClient.EncodeParameters := EncodeParams;
     try
-      if (FRefreshToken = '') then
+      if ARefreshAuthentication then
+      begin
+        LResponseModel := LClient.RefreshAccess(FClientId, FClientSecret, FRefreshToken);
+        try
+          FAccessToken := LResponseModel.access_token;
+          FTokenType := LResponseModel.token_type;
+          FExpiresIn := LResponseModel.expires_in;
+          Result := (FAccessToken <> '');
+        finally
+          LResponseModel.Free;
+        end;
+      end
+      else
       begin
         if (FResponseCode <> '') or GetResponceCode(GetAccessURL, FResponseCode)  then
         begin
@@ -130,24 +219,12 @@ begin
           try
             FAccessToken := LResponseModel.access_token;
             FRefreshToken := LResponseModel.refresh_token;
-            FResponseType := LResponseModel.token_type;
+            FTokenType := LResponseModel.token_type;
             FExpiresIn := LResponseModel.expires_in;
             Result := (FAccessToken <> '');
           finally
             LResponseModel.Free;
           end;
-        end;
-      end
-      else
-      begin
-        LResponseModel := LClient.RefreshAccess(FClientId, FClientSecret, FRefreshToken);
-        try
-          FAccessToken := LResponseModel.access_token;
-          FResponseType := LResponseModel.token_type;
-          FExpiresIn := LResponseModel.expires_in;
-          Result := (FAccessToken <> '');
-        finally
-          LResponseModel.Free;
         end;
       end;
     finally
@@ -156,17 +233,17 @@ begin
   end;
 end;
 
-function TSvOAuth.EncodeParams: Boolean;
+function TSvOAuth2.EncodeParams: Boolean;
 begin
   Result := False;
 end;
 
-function TSvOAuth.GetCustomRequestHeader: string;
+function TSvOAuth2.GetCustomRequestHeader: string;
 begin
-  Result := Format(AUTH_HEADER, [FResponseType, FAccessToken]);
+  Result := Format(AUTH_HEADER, [FTokenType, FAccessToken]);
 end;
 
-function TSvOAuth.UrlEncode(const S: string): string;
+function TSvOAuth2.UrlEncode(const S: string): string;
 var
   Ch : Char;
 begin

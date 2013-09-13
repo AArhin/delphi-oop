@@ -28,8 +28,8 @@ type
   private
     FDoGetRequestResult: TValue;
   protected
-    procedure DoGetRequest(Method: TRttiMethod; const Args: TArray<TValue>; ARestMethod: TRESTMethod;
-      var Result: TValue); override;
+    function DoGetRequest(Method: TRttiMethod; const Args: TArray<TValue>; ARestMethod: TRESTMethod;
+      var AResult: TValue): Integer; override;
   public
     [GET]
     [Path('/Entities')]
@@ -239,10 +239,11 @@ end;
 
 { TMockRestClient }
 
-procedure TMockRestClient.DoGetRequest(Method: TRttiMethod; const Args: TArray<TValue>;
-  ARestMethod: TRESTMethod; var Result: TValue);
+function TMockRestClient.DoGetRequest(Method: TRttiMethod; const Args: TArray<TValue>;
+  ARestMethod: TRESTMethod; var AResult: TValue): Integer;
 begin
-  Result := FDoGetRequestResult;
+  Result := HTTP_RESPONSE_OK;
+  AResult := FDoGetRequestResult;
 end;
 
 function TMockRestClient.GetEntity(AId: Integer): TWebEntity;
