@@ -25,7 +25,8 @@ uses
   SvHTTP.Authentication.OAuth in '..\SvHTTP.Authentication.OAuth.pas',
   GoogleOAuthTest in 'GoogleOAuthTest.pas',
   SvHTTP.Authentication.Google in '..\SvHTTP.Authentication.Google.pas',
-  SvHTTP.AuthDialog in '..\SvHTTP.AuthDialog.pas' {frmAuthDialog};
+  SvHTTP.AuthDialog in '..\SvHTTP.AuthDialog.pas' {frmAuthDialog},
+  CouchDBTest in 'CouchDBTest.pas';
 
 {$R *.RES}
 
