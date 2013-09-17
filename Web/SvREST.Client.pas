@@ -53,6 +53,8 @@ type
     function UrlEncode(const S: string): string; virtual;
     function UrlEncodeRFC3986(const URL: string): string; virtual;
     function HasAuthentication(): Boolean; virtual;
+    function HttpResultOK(AResponseCode: Integer): Boolean; virtual;
+    function OneParamInBody(ARestMethod: TRESTMethod): Boolean;
   public
     constructor Create(const AUrl: string; AProxyObject: TObject = nil; AProxyType: PTypeInfo = nil); virtual;
     destructor Destroy; override;
@@ -217,7 +219,7 @@ begin
       Result := GetLastResponseCode();
     end;
 
-    if (Result = HTTP_RESPONSE_OK)  then
+    if HttpResultOK(Result) then
     begin
       if LResponse.Size > 0 then
       begin
@@ -255,7 +257,7 @@ begin
       Result := GetLastResponseCode;
     end;
 
-    if (Result = HTTP_RESPONSE_OK) then
+    if HttpResultOK(Result) then
     begin
       if LResponse.Size > 0 then
       begin
@@ -282,7 +284,7 @@ begin
     except
       Result := GetLastResponseCode;
     end;
-    if (Result = HTTP_RESPONSE_OK) then
+    if HttpResultOK(Result) then
     begin
       if LResponse.Size > 0 then
       begin
@@ -320,6 +322,9 @@ begin
     rtPut: LHttpCode := DoPutRequest(Method, Args, ARestMethod, Result);
     rtDelete: LHttpCode := DoDeleteRequest(ARestMethod, Result);
   end;
+
+  if HttpResultOK(LHttpCode) then
+    Exit;
 
   case LHttpCode of
     HTTP_RESPONSE_AUTH_FAILED:
@@ -386,6 +391,16 @@ var
   LParamValue, LParamName: string;
 begin
   Result := TStringStream.Create('', TEncoding.UTF8);
+
+  if OneParamInBody(ARestMethod) then
+  begin
+    LParamValue := ARestMethod.Parameters[0].ToString;
+    if FEncodeParameters then
+      LParamValue := UrlEncodeRFC3986(LParamValue);
+    TStringStream(Result).WriteString(LParamValue);
+    Exit;
+  end;
+
   for i := 0 to ARestMethod.Parameters.Count - 1 do
   begin
     if i <> 0 then
@@ -551,6 +566,11 @@ begin
   Result := Assigned(FAuthentication) and (FAuthentication.DoAuthenticate);
 end;
 
+function TRESTClient.HttpResultOK(AResponseCode: Integer): Boolean;
+begin
+  Result := (AResponseCode >= 200) and (AResponseCode < 300)
+end;
+
 function TRESTClient.IsHttps: Boolean;
 begin
   Result := StartsText('https', FURL);
@@ -568,6 +588,11 @@ begin
       Exit;
   end;
   Result := False;
+end;
+
+function TRESTClient.OneParamInBody(ARestMethod: TRESTMethod): Boolean;
+begin
+  Result := (ARestMethod.Parameters.Count = 1) and (ARestMethod.ProduceMediaType in [MEDIA_TYPE.JSON, MEDIA_TYPE.XML]);
 end;
 
 function TRESTClient.SerializeObjectToString(AObject: TObject; ARestMethod: TRESTMethod): string;
