@@ -187,7 +187,7 @@ begin
       begin
         //inject parameter value into query
         Result := ReplaceStr(Result, '{' + LParsedParamName + '}', ARestMethod.Parameters[i].ToString);
-        ARestMethod.Parameters.Delete(i);
+        ARestMethod.Parameters[i].IsDisabled := True;
         Break;
       end;
     end;
@@ -377,11 +377,49 @@ procedure TRESTClient.FillRestMethodParameters(const Args: TArray<TValue>; ARest
 var
   i: Integer;
   LParameters: TArray<TRttiParameter>;
+  LAttrib: TCustomAttribute;
+  LSkip: Boolean;
 begin
   LParameters := AMethod.GetParameters;
   for i := Low(Args) to High(Args) do
   begin
-    ARestMethod.Parameters[i].Value := ConsumeMediaTypeAsString(LParameters[i].ParamType, Args[i], ARestMethod);
+    LSkip := False;
+    ARestMethod.Parameters[i].IsDisabled := False;
+    ARestMethod.Parameters[i].Value := TValue.Empty;
+    for LAttrib in LParameters[i].GetAttributes do
+    begin
+      if LAttrib.ClassType = TransientParamAttribute then
+        LSkip := True
+      else if LAttrib.ClassType = BodyParamAttribute then
+      begin
+        ARestMethod.Parameters[i].IsNameless := True;
+        ARestMethod.Parameters[i].Name := '';
+        ARestMethod.Parameters[i].Value := ConsumeMediaTypeAsString(LParameters[i].ParamType, Args[i], ARestMethod);
+      end
+      else if LAttrib.ClassType = QueryParamNameValueAttribute then
+      begin
+        ARestMethod.Parameters[i].IsNameless := False;
+        ARestMethod.Parameters[i].Name := QueryParamNameValueAttribute(LAttrib).Name;
+        ARestMethod.Parameters[i].Value := QueryParamNameValueAttribute(LAttrib).Value;
+      end
+      else if (LAttrib.ClassType = QueryParamAttribute) then
+      begin
+        ARestMethod.Parameters[i].IsNameless := False;
+        if (QueryParamAttribute(LAttrib).Name <> '') then
+          ARestMethod.Parameters[i].Name := QueryParamAttribute(LAttrib).Name;
+        ARestMethod.Parameters[i].Value := ConsumeMediaTypeAsString(LParameters[i].ParamType, Args[i], ARestMethod);
+      end;
+    end;
+
+    if LSkip then
+    begin
+      ARestMethod.Parameters[i].IsDisabled := True;
+    end
+    else
+    begin
+      if ARestMethod.Parameters[i].Value.IsEmpty then
+        ARestMethod.Parameters[i].Value := ConsumeMediaTypeAsString(LParameters[i].ParamType, Args[i], ARestMethod);
+    end;
   end;
 end;
 
@@ -389,25 +427,27 @@ function TRESTClient.GenerateSourceContent(ARestMethod: TRESTMethod): TStream;
 var
   i: Integer;
   LParamValue, LParamName: string;
+  LParameters: TArray<TRESTMethodParameter>;
 begin
   Result := TStringStream.Create('', TEncoding.UTF8);
 
-  if OneParamInBody(ARestMethod) then
-  begin
-    LParamValue := ARestMethod.Parameters[0].ToString;
-    if FEncodeParameters then
-      LParamValue := UrlEncodeRFC3986(LParamValue);
-    TStringStream(Result).WriteString(LParamValue);
-    Exit;
-  end;
-
-  for i := 0 to ARestMethod.Parameters.Count - 1 do
+  LParameters := ARestMethod.GetEnabledParameters();
+  for i := 0 to Length(LParameters) - 1 do
   begin
     if i <> 0 then
       TStringStream(Result).WriteString('&');
 
-    LParamValue := ARestMethod.Parameters[i].ToString;
-    LParamName := ARestMethod.Parameters[i].Name;
+    if (LParameters[i].IsNameless) or (LParameters[i].Name = '') then
+    begin
+      LParamValue := LParameters[i].ToString;
+      if FEncodeParameters then
+        LParamValue := UrlEncodeRFC3986(LParamValue);
+      TStringStream(Result).WriteString(LParamValue);
+      Continue;
+    end;
+
+    LParamValue := LParameters[i].ToString;
+    LParamName := LParameters[i].Name;
     if FEncodeParameters then
     begin
       LParamName := UrlEncodeRFC3986(LParamName);
@@ -422,6 +462,7 @@ function TRESTClient.GenerateUrl(ARestMethod: TRESTMethod): string;
 var
   i: Integer;
   LParamValue, LParamName: string;
+  LParameters: TArray<TRESTMethodParameter>;
 begin
   Result := FURL;
   if ARestMethod.Path <> '' then
@@ -435,13 +476,14 @@ begin
   if ARestMethod.Parameters.Count > 0 then
     Result := Result + '?';
 
-  for i := 0 to ARestMethod.Parameters.Count - 1 do
+  LParameters := ARestMethod.GetEnabledParameters();
+  for i := Low(LParameters) to High(LParameters) do
   begin
     if i <> 0 then
       Result := Result + '&';
 
-    LParamName := ARestMethod.Parameters[i].Name;
-    LParamValue := ARestMethod.Parameters[i].ToString;
+    LParamName := LParameters[i].Name;
+    LParamValue := LParameters[i].ToString;
     if FEncodeParameters then
     begin
       LParamName := UrlEncodeRFC3986(LParamName);

@@ -55,13 +55,13 @@ type
     [Consumes(MEDIA_TYPE.JSON)]
     [Produces(MEDIA_TYPE.JSON)]
     {$WARNINGS OFF}
-    function AddPerson(APerson: TCouchPerson): TCouchDBResponse; virtual;
+    function AddPerson([BodyParam] APerson: TCouchPerson): TCouchDBResponse; virtual;
 
     [GET]
     [Path('/unittest/{AId}')]
     [Consumes(MEDIA_TYPE.JSON)]
     [Produces(MEDIA_TYPE.JSON)]
-    function GetPerson(const AId: string): TCouchPerson; virtual;
+    function GetPerson([QueryParam] const AId: string): TCouchPerson; virtual;
 
     [Path('/unittest/')]
     [Consumes(MEDIA_TYPE.JSON)]
