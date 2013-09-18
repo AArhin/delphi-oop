@@ -104,7 +104,13 @@ begin
       end;
     end
     else
-      Result := ASource.ToString;
+    begin
+      case ARttiType.TypeKind of
+        tkString, tkWString, tkUString, tkLString:
+          Result := GetSerializedDataString(ASource, ARestMethod);
+        tkInteger, tkInt64, tkFloat: Result := GetLastResponseCode;
+      end;
+    end;
   end;
 end;
 

@@ -2,6 +2,10 @@ unit CouchDBTest;
 
 interface
 
+{
+  In order to use these unit tests CouchDB (http://couchdb.apache.org/) must be installed on local PC.
+}
+
 uses
   TestFramework
   ,SvHTTPClientInterface
@@ -63,6 +67,12 @@ type
     [Produces(MEDIA_TYPE.JSON)]
     function GetPerson([QueryParam] const AId: string): TCouchPerson; virtual;
 
+    [GET]
+    [Path('/unittest/{AId}')]
+    [Consumes(MEDIA_TYPE.JSON)]
+    [Produces(MEDIA_TYPE.JSON)]
+    function GetPersonAsJsonString([QueryParam] const AId: string): string; virtual;
+
     [Path('/unittest/')]
     [Consumes(MEDIA_TYPE.JSON)]
     [PUT]
@@ -101,6 +111,7 @@ implementation
 uses
   SvWeb.Consts
   ,SysUtils
+  ,StrUtils
   ,IdHTTP
   ;
 
@@ -110,6 +121,7 @@ procedure TCouchDBTest.Add_Get_Document;
 var
   LResp: TCouchDBResponse;
   LPerson, LNewPerson: TCouchPerson;
+  LJson: string;
 begin
   LPerson := TCouchPerson.Create;
   try
@@ -127,6 +139,13 @@ begin
       finally
         LNewPerson.Free;
       end;
+
+      LJson := Trim(FClient.GetPersonAsJsonString(LResp.id));
+      CheckTrue(LJson <> '');
+      CheckTrue(StartsStr('{', LJson));
+      CheckTrue(EndsStr('}', LJson));
+      Status(LJson);
+
     finally
       LResp.Free;
     end;
@@ -218,6 +237,11 @@ begin
 end;
 
 function TCouchDBClient.GetPerson(const AId: string): TCouchPerson;
+begin
+
+end;
+
+function TCouchDBClient.GetPersonAsJsonString(const AId: string): string;
 begin
 
 end;
