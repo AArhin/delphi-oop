@@ -50,6 +50,38 @@ type
     function GetITJobs(): TJobs; virtual;
   end;
 
+  TOrderDetail = class
+  private
+    FOrderId: Integer;
+    FProductId: Integer;
+    FUnitPrice: Currency;
+    FQuantity: Integer;
+    FDiscount: Single;
+  public
+    property OrderId: Integer read FOrderId write FOrderId;
+    property ProductId: Integer read FProductId write FProductId;
+    property UnitPrice: Currency read FUnitPrice write FUnitPrice;
+    property Quantity: Integer read FQuantity write FQuantity;
+    property Discount: Single read FDiscount write FDiscount;
+  end;
+
+  TOrderDetails = class
+  private
+    Fvalue: TsvObjectList<TOrderDetail>;
+  public
+    destructor Destroy; override;
+
+    property value: TSvObjectList<TOrderDetail> read Fvalue write Fvalue;
+  end;
+
+  TNortwindClient = class(TRESTClient)
+  public
+    [GET]
+    [Path('/Order_Details')]
+    [Consumes(MEDIA_TYPE.JSON)]
+    function GetOrderDetails(): TOrderDetails; virtual;
+  end;
+
   TUSAJobsIntegrationTests = class(TTestCase)
   private
     FRESTClient: TUsaJobsRESTClient;
@@ -58,6 +90,16 @@ type
     procedure TearDown; override;
   published
     procedure GetITJobs();
+  end;
+
+  TODataTests = class(TTestCase)
+  private
+    FRESTClient: TNortwindClient;
+  public
+    procedure SetUp; override;
+    procedure TearDown; override;
+  published
+    procedure GetOrderDetails();
   end;
 
 implementation
@@ -127,7 +169,53 @@ begin
   inherited;
 end;
 
+{ TOrderDetails }
+
+destructor TOrderDetails.Destroy;
+begin
+  Fvalue.Free;
+  inherited Destroy;
+end;
+
+{$WARNINGS OFF}
+{ TNortwindClient }
+
+function TNortwindClient.GetOrderDetails: TOrderDetails;
+begin
+  //
+end;
+
+{$WARNINGS ON}
+
+{ TODataTests }
+
+procedure TODataTests.GetOrderDetails;
+var
+  LOrderDetails: TOrderDetails;
+begin
+  LOrderDetails := FRESTClient.GetOrderDetails;
+  try
+    CheckTrue(LOrderDetails.value.Count > 0);
+  finally
+    LOrderDetails.Free;
+  end;
+end;
+
+procedure TODataTests.SetUp;
+begin
+  inherited;
+  FRESTClient := TNortwindClient.Create('http://services.odata.org/V3/Northwind/Northwind.svc');
+  FRESTClient.SetHttpClient(HTTP_CLIENT_INDY);
+end;
+
+procedure TODataTests.TearDown;
+begin
+  inherited;
+  FRESTClient.Free;
+end;
+
 initialization
   RegisterTest(TUSAJobsIntegrationTests.Suite);
+  RegisterTest(TODataTests.Suite);
 
 end.
