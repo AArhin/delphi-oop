@@ -13,9 +13,13 @@ type
   private
     FName: string;
     FValue: TValue;
+    FIsNameless: Boolean;
+    FIsDisabled: Boolean;
   public
     function ToString(): string; reintroduce;
 
+    property IsDisabled: Boolean read FIsDisabled write FIsDisabled;
+    property IsNameless: Boolean read FIsNameless write FIsNameless;
     property Name: string read FName write FName;
     property Value: TValue read FValue write FValue;
   end;
@@ -33,6 +37,8 @@ type
   public
     constructor Create(); virtual;
     destructor Destroy; override;
+
+    function GetEnabledParameters: TArray<TRESTMethodParameter>;
 
     property ConsumeMediaType: MEDIA_TYPE read FConsumeMediaType write FConsumeMediaType;
     property ProduceMediaType: MEDIA_TYPE read FProduceMediaType write FProduceMediaType;
@@ -58,6 +64,24 @@ destructor TRESTMethod.Destroy;
 begin
   FParameters.Free;
   inherited Destroy;
+end;
+
+function TRESTMethod.GetEnabledParameters: TArray<TRESTMethodParameter>;
+var
+  I, LIndex: Integer;
+begin
+  SetLength(Result, Parameters.Count);
+  LIndex := 0;
+  for I := 0 to Parameters.Count - 1 do
+  begin
+    if not Parameters[I].IsDisabled then
+    begin
+      Result[LIndex] := Parameters[i];
+      Inc(LIndex);
+    end;
+  end;
+
+  SetLength(Result, LIndex);
 end;
 
 { TRESTMethodParameter }
