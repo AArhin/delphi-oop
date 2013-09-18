@@ -3,52 +3,31 @@
 
 = Usage example=
 
-In this example we will show you how to consume GeoNames.org RESTful web service.
+In this example we will show you how to consume OData.org RESTful web service. Full source code can be found in RestClientGUI Demo project.
 
-First, define your GeoNames types:
+First define our types:
 {{{
 uses
   SvREST.Client
-  ,Generics.Collections
+  ,SvContainers
   ,SvHTTP.Attributes
   ;
 
 type
-  geoname = class
+  TCustomer = class
   private
-    FtoponymName: string;
-    Fname: string;
-    Flat: Integer;
-    Flng: Integer;
-    FgeonameId: Int64;
-    FcountryCode: string;
-    FcountryName: string;
-    Ffcl: string;
-    Ffcode: string;
-    Fpopulation: Integer;
+    ...
   public
-    property toponymName: string read FtoponymName write FtoponymName;
-    property name: string read Fname write Fname;
-    property lat: Integer read Flat write Flat;
-    property lng: Integer read Flng write Flng;
-    property geonameId: Int64 read FgeonameId write FgeonameId;
-    property countryCode: string read FcountryCode write FcountryCode;
-    property countryName: string read FcountryName write FcountryName;
-    property fcl: string read Ffcl write Ffcl;
-    property fcode: string read Ffcode write Ffcode;
-    property population: Integer read Fpopulation write Fpopulation;
-
+    ...
   end;
 
-  TGeonames = class
+  TCustomers = class
   private
-    Fgeonames: TObjectList<geoname>;
-    FtotalResultsCount: Integer;
+    FValue: TSvObjectList<TCustomer>;
   public
     destructor Destroy; override;
 
-    property totalResultsCount: Integer read FtotalResultsCount write FtotalResultsCount;
-    property geonames: TObjectList<geoname> read Fgeonames write Fgeonames;
+    property Value: TSvObjectList<TCustomer> read FValue write FValue;
   end;
 
 }}}
@@ -56,54 +35,24 @@ type
 Define our client type:
 
 {{{  
-  TGeonamesClient = class(TRESTClient)
+  TODataNorthwindClient = class(TRESTClient)
   public
-    [GET]
-    [Consumes(MEDIA_TYPE.JSON)]
-    [Path('/neighboursJSON')]
-    function GetNeighbours(geonameId: Int64; const username: string = 'demo'): TGeonames; virtual;
+    [GET] [Path('/Customers')] [Consumes(MEDIA_TYPE.JSON)]
+    function GetCustomers(): TCustomers; virtual;
+  end;
 }}}
 
 Or if you use Delphi XE2 or higher define an interface:
 {{{
-  IGeonamesClient = interface(IInvokable)
+  IODataNorthwindClient = interface(IInvokable)
     ['{055E3262-AA1E-43E7-90BC-7A1E84D0746D}']
-    [GET]
-    [Path('/neighboursJSON')]
-    [Consumes(MEDIA_TYPE.JSON)]
-    function GetNeighbours(geonameId: Int64; const username: string = 'demo'): TGeonames;
+    [GET] [Path('/Customers')] [Consumes(MEDIA_TYPE.JSON)]
+    function GetCustomers(): TCustomers;
   end;
 }}}
 
-As you see, our TGeonamesClient should inherit from TRESTClient class. If you are using XE2 or higher you only need to define your interface, there is no need to inherit from any other class. Attributes are used here to define various properties which our client will use, e.g. [Consumes(MEDIA_TYPE.JSON)] specifies that TRestClient will automatically deserialize recieved json string from the server into TGeonames instance, [GET] specifies that GET request will be used, [Path('/neighboursJSON')] specifies relative path.
+As you see, our `TODataNorthwindClient` should inherit from `TRESTClient` class. If you are using XE2 or higher you only need to define your interface, there is no need to inherit from any other class. Attributes are used here to define various properties which our client will use, e.g. `[Consumes(MEDIA_TYPE.JSON)]` and function return type specifies that `TRestClient` will automatically deserialize received json string from the server into `TODataNorthwindClient` instance, `[GET]` specifies that GET request will be used, `[Path('/Customers')]` specifies relative path from the base URL.
 
-That's it. Now we just need to create our client and call it's GetNeighbours method (TRESTClient then execute HTTP GET request (URL: http://api.geonames.org/neighboursJSON?geonameId=597427&username=demo):
-{{{
-procedure Main();
-var
-  LClient: TGeonamesClient;
-  LGeoNames: TGeonames;
-begin
-  LClient := TGeonamesClient.Create('http://api.geonames.org');
-  //XE2 LClient := TRESTClientVirtualInterface.Create(TypeInfo(IGeonamesClient), 'http://localhost', HTTP_CLIENT_INDY) as IGeonamesClient; 
-  try
-    LClient.SetHttpClient('idHttp');
-    LGeoNames := LClient.GetNeighbours(597427, 'demo');
-    try
-      if (Assigned(LGeoNames.geonames)) and (LGeoNames.geonames.Count > 0) then
-      begin
-        Writeln(Format('Total Count %D', [LGeoNames.totalResultsCount]));
-        Writeln(Format('First country name: %S', [LGeoNames.geonames[0].countryName]));
-        Writeln(Format('First country latitude: %D', [LGeoNames.geonames[0].lat]));
-        Writeln(Format('First country longitude: %D', [LGeoNames.geonames[0].lng]));
-        Writeln(Format('First country code: %S', [LGeoNames.geonames[0].countryCode]));
-        Writeln(Format('First country population: %D', [LGeoNames.geonames[0].population]));
-      end;
-    finally
-      LGeoNames.Free;
-    end;
-  finally
-    LClient.Free;
-  end;
-end;
-}}} 
+That's it. Now we just need to create our client and call `GetCustomers()` method:
+
+https://lh6.googleusercontent.com/-J9ZRzCwLYos/UjoSKrjpxDI/AAAAAAAAC4k/WJLMNnOoEO8/w1005-h603-no/RestDemo.jpg
