@@ -59,7 +59,7 @@ type
     [Consumes(MEDIA_TYPE.JSON)]
     [Produces(MEDIA_TYPE.JSON)]
     {$WARNINGS OFF}
-    function AddPerson([BodyParam] APerson: TCouchPerson): TCouchDBResponse; virtual;
+    function AddPerson([BodyParam] APerson: TCouchPerson; [HeaderParam] Foobar: string): TCouchDBResponse; virtual;
 
     [GET]
     [Path('/unittest/{AId}')]
@@ -128,7 +128,7 @@ begin
     LPerson.Name := 'FooBar';
     LPerson.LastEdited := Now;
     LPerson.MyId := 1;
-    LResp := FClient.AddPerson(LPerson);
+    LResp := FClient.AddPerson(LPerson, 'Header Param');
     try
       CheckTrue(LResp.ok);
 
@@ -160,7 +160,7 @@ var
   LDBInfo: TCouchDBInfo;
 begin
   try
-  LResp := FClient.CreateDatabase;
+    LResp := FClient.CreateDatabase;
     try
       CheckTrue(LResp.ok);
     finally
@@ -216,7 +216,7 @@ end;
 
 { TCouchDBClient }
 
-function TCouchDBClient.AddPerson(APerson: TCouchPerson): TCouchDBResponse;
+function TCouchDBClient.AddPerson(APerson: TCouchPerson; Foobar: string): TCouchDBResponse;
 begin
 
 end;

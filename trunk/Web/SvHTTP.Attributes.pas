@@ -39,6 +39,14 @@ type
   DELETEAttribute = class(TCustomAttribute)
   end;
 
+  HEADAttribute = class(TCustomAttribute)
+
+  end;
+
+  OPTIONSAttribute = class(TCustomAttribute)
+
+  end;
+
   {$REGION 'Documentation'}
   ///	<summary>
   ///	  Notifies that method parameter will be used as a request parameter with
@@ -66,7 +74,7 @@ type
   FormParamAttribute = class(TCustomAttribute)
   end;
 
-  HeaderParamAttribute = class(TCustomAttribute)
+  HeaderParamAttribute = class(QueryParamAttribute)
   end;
 
 

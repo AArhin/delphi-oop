@@ -75,6 +75,7 @@
 				<Form>frmAuthDialog</Form>
 			</DCCReference>
 			<DCCReference Include="CouchDBTest.pas"/>
+			<DCCReference Include="..\SvHTTPClient.Response.pas"/>
 			<BuildConfiguration Include="Release">
 				<Key>Cfg_2</Key>
 				<CfgParent>Base</CfgParent>
