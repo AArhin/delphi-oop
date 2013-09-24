@@ -8,7 +8,7 @@ uses
   ;
 
 type
-  THttpResponse = class(TInterfacedObject, IHttpResponse)
+  TSvHttpResponse = class(TInterfacedObject, IHttpResponse)
   private
     FHeaders: string;
     FResponseCode: Integer;
@@ -33,41 +33,41 @@ implementation
 
 { THttpResponse }
 
-constructor THttpResponse.Create;
+constructor TSvHttpResponse.Create;
 begin
   inherited Create;
   FResponseStream := TMemoryStream.Create;
 end;
 
-destructor THttpResponse.Destroy;
+destructor TSvHttpResponse.Destroy;
 begin
   FResponseStream.Free;
   inherited Destroy;
 end;
 
-function THttpResponse.GetHeadersText: string;
+function TSvHttpResponse.GetHeadersText: string;
 begin
   Result := FHeaders;
 end;
 
-function THttpResponse.GetResponseCode: Integer;
+function TSvHttpResponse.GetResponseCode: Integer;
 begin
   Result := FResponseCode;
 end;
 
-function THttpResponse.GetResponseStream: TStream;
+function TSvHttpResponse.GetResponseStream: TStream;
 begin
   Result := FResponseStream;
 end;
 
-function THttpResponse.GetResponseText: string;
+function TSvHttpResponse.GetResponseText: string;
 begin
   Result := '';
   if FResponseStream is TStringStream then
     Result := TStringStream(FResponseStream).DataString;
 end;
 
-procedure THttpResponse.SetResponseStream(const Value: TStream);
+procedure TSvHttpResponse.SetResponseStream(const Value: TStream);
 begin
   if not Assigned(Value) then
     FResponseStream.Size := 0

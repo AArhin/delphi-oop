@@ -4,7 +4,11 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, ComCtrls, StdCtrls, ODataNorthwindClient, VirtualTrees, ExtCtrls;
+  Dialogs, ComCtrls, StdCtrls, ODataNorthwindClient, VirtualTrees, ExtCtrls
+  {$IF CompilerVersion > 22}
+  ,SvREST.Client.VirtualInterface
+  {$IFEND}
+  ;
 
 type
   TfrmOData = class(TForm)
@@ -31,7 +35,7 @@ type
     procedure vtCustomersDblClick(Sender: TObject);
   private
     { Private declarations }
-    FRestClient: TODataNorthwindClient;
+    FRestClient: {$IF CompilerVersion = 22} TODataNorthwindClient {$ELSE} IODataNorthwindClient {$IFEND};
     FCustomers: TCustomers;
     FOrders: TOrders;
   protected
@@ -94,20 +98,39 @@ begin
 end;
 
 procedure TfrmOData.FormCreate(Sender: TObject);
+const
+  BASE_URL = 'http://services.odata.org/V3/Northwind/Northwind.svc';
+{$IF CompilerVersion > 22}
+var
+  LInitParams: TSvRESTClientInitParams;
+{$IFEND}
 begin
   DesktopFont := True;
   ReportMemoryLeaksOnShutdown := True;
   pcData.ActivePageIndex := 0;
   FCustomers := nil;
   FOrders := nil;
-  FRestClient := TODataNorthwindClient.Create('http://services.odata.org/V3/Northwind/Northwind.svc');
+  {$IF CompilerVersion = 22}
+  //Delphi XE does not support TVirtualInterface so we must use our class derrived from TSvRESTClient
+  FRestClient := TODataNorthwindClient.Create(BASE_URL);
   FRestClient.SetHttpClient(HTTP_CLIENT_INDY);
   FRestClient.EncodeParameters := True;
+  {$ELSE}
+  //Just use our IODataNorthwindClient interface
+  LInitParams.HttpClientName := HTTP_CLIENT_INDY;
+  LInitParams.EncodeParameters := True;
+  LInitParams.Authentication := nil;
+  LInitParams.InterfaceTypeInfo := TypeInfo(IODataNorthwindClient);
+  LInitParams.BaseURL := BASE_URL;
+  FRestClient := TSvRESTClientVirtualInterface.Create(LInitParams) as IODataNorthwindClient;
+  {$IFEND}
 end;
 
 procedure TfrmOData.FormDestroy(Sender: TObject);
 begin
+  {$IF CompilerVersion = 22}
   FRestClient.Free;
+  {$IFEND}
   FCustomers.Free;
   FOrders.Free;
 end;

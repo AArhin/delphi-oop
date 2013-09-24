@@ -13,7 +13,7 @@ type
 
   TConstructorFunc = reference to function(): IHttpClient;
 
-  THTTPClientFactory = class
+  TSvHTTPClientFactory = class
   private
     class var
       FClients: TDictionary<string, THttpClientClass>;
@@ -36,17 +36,17 @@ type
 
 { THTTPClientFactory }
 
-class constructor THTTPClientFactory.Create;
+class constructor TSvHTTPClientFactory.Create;
 begin
   FClients := TDictionary<string, THttpClientClass>.Create;
 end;
 
-class destructor THTTPClientFactory.Destroy;
+class destructor TSvHTTPClientFactory.Destroy;
 begin
   FClients.Free;
 end;
 
-class function THTTPClientFactory.GetInstance(const AClientName: string): IHttpClient;
+class function TSvHTTPClientFactory.GetInstance(const AClientName: string): IHttpClient;
 var
   LClient: THttpClientClass;
 begin
@@ -56,7 +56,7 @@ begin
   Result := LClient.Create();
 end;
 
-class procedure THTTPClientFactory.RegisterHTTPClient(const AClientName: string;
+class procedure TSvHTTPClientFactory.RegisterHTTPClient(const AClientName: string;
   AClass: THttpClientClass);
 begin
   FClients.AddOrSetValue(AClientName, AClass);

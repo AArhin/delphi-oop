@@ -9,15 +9,15 @@ uses
   ;
 
 type
-  TParameterType = (ptBody, ptHeader);
+  TSvRESTParameterType = (ptBody, ptHeader);
 
-  TRESTMethodParameter = class
+  TSvRESTMethodParameter = class
   private
     FName: string;
     FValue: TValue;
     FIsNameless: Boolean;
     FIsDisabled: Boolean;
-    FParamType: TParameterType;
+    FParamType: TSvRESTParameterType;
     FIsInjectable: Boolean;
   public
     function ToString(): string; reintroduce;
@@ -26,36 +26,36 @@ type
     property IsNameless: Boolean read FIsNameless write FIsNameless;
     property IsInjectable: Boolean read FIsInjectable write FIsInjectable;
     property Name: string read FName write FName;
-    property ParamType: TParameterType read FParamType write FParamType;
+    property ParamType: TSvRESTParameterType read FParamType write FParamType;
     property Value: TValue read FValue write FValue;
   end;
 
-  TRESTMethod = class
+  TSvRESTMethod = class
   private
     FRequestType: TRequestType;
     FName: string;
     FPath: string;
-    FParameters: TObjectList<TRESTMethodParameter>;
-    FHeaderParameters: TObjectList<TRESTMethodParameter>;
+    FParameters: TObjectList<TSvRESTMethodParameter>;
+    FHeaderParameters: TObjectList<TSvRESTMethodParameter>;
     FReturnValue: TValue;
     FConsumeMediaType: MEDIA_TYPE;
     FUrl: string;
     FProduceMediaType: MEDIA_TYPE;
-    FHeaderParameteres: TObjectList<TRESTMethodParameter>;
+    FHeaderParameteres: TObjectList<TSvRESTMethodParameter>;
   public
     constructor Create(); virtual;
     destructor Destroy; override;
 
-    function GetEnabledParameters: TArray<TRESTMethodParameter>;
-    function GetHeaderParameters: TArray<TRESTMethodParameter>;
+    function GetEnabledParameters: TArray<TSvRESTMethodParameter>;
+    function GetHeaderParameters: TArray<TSvRESTMethodParameter>;
 
     property ConsumeMediaType: MEDIA_TYPE read FConsumeMediaType write FConsumeMediaType;
     property ProduceMediaType: MEDIA_TYPE read FProduceMediaType write FProduceMediaType;
     property Name: string read FName write FName;
     property RequestType: TRequestType read FRequestType write FRequestType;
     property Path: string read FPath write FPath;
-    property HeaderParameteres: TObjectList<TRESTMethodParameter> read FHeaderParameteres;
-    property Parameters: TObjectList<TRESTMethodParameter> read FParameters;
+    property HeaderParameteres: TObjectList<TSvRESTMethodParameter> read FHeaderParameteres;
+    property Parameters: TObjectList<TSvRESTMethodParameter> read FParameters;
     property ReturnValue: TValue read FReturnValue write FReturnValue;
     property Url: string read FUrl write FUrl;
   end;
@@ -64,21 +64,21 @@ implementation
 
 { TRESTMethod }
 
-constructor TRESTMethod.Create;
+constructor TSvRESTMethod.Create;
 begin
-  FParameters := TObjectList<TRESTMethodParameter>.Create(True);
-  FHeaderParameters := TObjectList<TRESTMethodParameter>.Create(True);
+  FParameters := TObjectList<TSvRESTMethodParameter>.Create(True);
+  FHeaderParameters := TObjectList<TSvRESTMethodParameter>.Create(True);
   FReturnValue := TValue.Empty;
 end;
 
-destructor TRESTMethod.Destroy;
+destructor TSvRESTMethod.Destroy;
 begin
   FParameters.Free;
   FHeaderParameters.Free;
   inherited Destroy;
 end;
 
-function TRESTMethod.GetEnabledParameters: TArray<TRESTMethodParameter>;
+function TSvRESTMethod.GetEnabledParameters: TArray<TSvRESTMethodParameter>;
 var
   I, LIndex: Integer;
 begin
@@ -96,7 +96,7 @@ begin
   SetLength(Result, LIndex);
 end;
 
-function TRESTMethod.GetHeaderParameters: TArray<TRESTMethodParameter>;
+function TSvRESTMethod.GetHeaderParameters: TArray<TSvRESTMethodParameter>;
 var
   I, LIndex: Integer;
 begin
@@ -116,7 +116,7 @@ end;
 
 { TRESTMethodParameter }
 
-function TRESTMethodParameter.ToString: string;
+function TSvRESTMethodParameter.ToString: string;
 begin
   Result := FValue.ToString;
 end;

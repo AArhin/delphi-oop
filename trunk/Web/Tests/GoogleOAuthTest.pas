@@ -25,7 +25,7 @@ type
   end;
 
 
-  TGoogleClient = class(TRESTClient)
+  TGoogleClient = class(TSvRESTClient)
   public
     [GET]
     [Path('/people/me')]

@@ -39,7 +39,7 @@ type
 
   //https://data.usajobs.gov/Rest
   [Path('/jobs')]
-  TUSAJobsClient = class(TRESTClient)
+  TUSAJobsClient = class(TSvRESTClient)
   public
     [GET]
     [Consumes(MEDIA_TYPE.JSON)]

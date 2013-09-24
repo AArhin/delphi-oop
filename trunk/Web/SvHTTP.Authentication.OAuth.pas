@@ -23,7 +23,7 @@ type
     property token_type: string read Ftoken_type write Ftoken_type;
   end;
 
-  TRequestAccessClient = class(TRESTClient)
+  TRequestAccessClient = class(TSvRESTClient)
   public
     [POST]
     [Consumes(MEDIA_TYPE.JSON)]

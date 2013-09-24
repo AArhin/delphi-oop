@@ -24,11 +24,11 @@ type
     function GetEntity(AId: Integer): TWebEntity;
   end;
 
-  TMockRestClient = class(TRESTClient)
+  TMockRestClient = class(TSvRESTClient)
   private
     FDoGetRequestResult: TValue;
   protected
-    function InternalDoRequest(Method: TRttiMethod; const Args: TArray<TValue>; ARestMethod: TRESTMethod;
+    function InternalDoRequest(Method: TRttiMethod; const Args: TArray<TValue>; ARestMethod: TSvRESTMethod;
       var AResult: TValue): IHttpResponse; override;
   public
     [GET]
@@ -99,7 +99,7 @@ end;
 procedure TestTRESTClient.DoRequest;
 var
   _Result: TValue;
-  LRestMethod: TRESTMethod;
+  LRestMethod: TSvRESTMethod;
   Args: TArray<TValue>;
   LMethod: TRttiMethod;
   LEntity: TWebEntity;
@@ -129,7 +129,7 @@ procedure TestTRESTClient.GenerateUrl;
 var
   LUrl: string;
   LMethod: TRttiMethod;
-  LRestMethod: TRESTMethod;
+  LRestMethod: TSvRESTMethod;
   LArgs: TArray<TValue>;
 begin
   LMethod := TRttiContext.Create.GetType(FRESTClient.ClassType).GetMethod('GetEntity');
@@ -148,7 +148,7 @@ procedure TestTRESTClient.DoCheckPathParameters;
 var
   ReturnValue: string;
   LMethod: TRttiMethod;
-  LRestMethod: TRESTMethod;
+  LRestMethod: TSvRESTMethod;
   AUrl: string;
   LArgs: TArray<TValue>;
 begin
@@ -170,7 +170,7 @@ procedure TestTRESTClient.GenerateSourceContent;
 var
   LStream: TStream;
   LMethod: TRttiMethod;
-  LRestMethod: TRESTMethod;
+  LRestMethod: TSvRESTMethod;
   LArgs: TArray<TValue>;
   LStringStream: TStringList;
 begin
@@ -199,7 +199,7 @@ end;
 procedure TestTRESTClient.FillRestMethodParameters;
 var
   LMethod: TRttiMethod;
-  LRestMethod: TRESTMethod;
+  LRestMethod: TSvRESTMethod;
   LArgs: TArray<TValue>;
   LValue: string;
 begin
@@ -220,7 +220,7 @@ procedure TestTRESTClient.ConsumeMediaTypeAsString;
 var
   ReturnValue: string;
   LMethod: TRttiMethod;
-  LRestMethod: TRESTMethod;
+  LRestMethod: TSvRESTMethod;
 begin
   LMethod := TRttiContext.Create.GetType(FRESTClient.ClassType).GetMethod('GetEntity');
   LRestMethod := FRESTClient.GetRESTMethod(LMethod, TRttiContext.Create.GetType(FRESTClient.ClassType));
@@ -247,11 +247,11 @@ begin
 end;
 
 function TMockRestClient.InternalDoRequest(Method: TRttiMethod; const Args: TArray<TValue>;
-  ARestMethod: TRESTMethod; var AResult: TValue): IHttpResponse;
+  ARestMethod: TSvRESTMethod; var AResult: TValue): IHttpResponse;
 var
-  LResponse: THttpResponse;
+  LResponse: TSvHttpResponse;
 begin
-  LResponse := THttpResponse.Create;
+  LResponse := TSvHttpResponse.Create;
   LResponse.ResponseCode := HTTP_RESPONSE_OK;
   AResult := FDoGetRequestResult;
   Result := LResponse;
@@ -272,7 +272,7 @@ end;
 procedure TestVirtualRESTClient.SetUp;
 begin
   inherited;
-  FClient := TRESTClientVirtualInterface.Create(TypeInfo(ITestRestClient), 'http://localhost', HTTP_CLIENT_MOCK) as ITEstRestClient;
+  FClient := TSvRESTClientVirtualInterface.Create(TypeInfo(ITestRestClient), 'http://localhost', HTTP_CLIENT_MOCK) as ITEstRestClient;
 end;
 
 procedure TestVirtualRESTClient.TearDown;
