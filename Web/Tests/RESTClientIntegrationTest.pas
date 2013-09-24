@@ -38,11 +38,11 @@ type
   //https://data.usajobs.gov/Rest
   [Path('/jobs')]
   [QueryParamNameValue('Page', '1')]
-  TUsaJobsRESTClient = class(TRESTClient)
+  TUsaJobsRESTClient = class(TSvRESTClient)
   private
     FLastURL: string;
   protected
-    function GenerateUrl(ARestMethod: TRESTMethod): string; override;
+    function GenerateUrl(ARestMethod: TSvRESTMethod): string; override;
   public
     [GET]
     [Consumes(MEDIA_TYPE.JSON)]
@@ -74,7 +74,7 @@ type
     property value: TSvObjectList<TOrderDetail> read Fvalue write Fvalue;
   end;
 
-  TNortwindClient = class(TRESTClient)
+  TNortwindClient = class(TSvRESTClient)
   public
     [GET]
     [Path('/Order_Details')]
@@ -144,7 +144,7 @@ end;
 
 { TUsaJobsRESTClient }
 
-function TUsaJobsRESTClient.GenerateUrl(ARestMethod: TRESTMethod): string;
+function TUsaJobsRESTClient.GenerateUrl(ARestMethod: TSvRESTMethod): string;
 begin
   Result := inherited GenerateUrl(ARestMethod);
   FLastURL := Result;

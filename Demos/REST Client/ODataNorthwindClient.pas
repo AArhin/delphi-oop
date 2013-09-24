@@ -7,6 +7,7 @@ uses
   ,SvHTTPClientInterface
   ,SvREST.Client
   ,SvContainers
+
   ;
 
 type
@@ -74,6 +75,7 @@ type
     property Value: TSvObjectList<TOrder> read FValue write FValue;
   end;
 
+  {$IF CompilerVersion = 22}
   TODataNorthwindClient = class(TRESTClient)
   public
     [GET] [Path('/Customers')] [Consumes(MEDIA_TYPE.JSON)]
@@ -84,10 +86,21 @@ type
     function GetCustomerOrders([QueryParam('$filter')] const AFilter: string; [Context] out AResponse: IHttpResponse): TOrders; virtual;
     {$WARNINGS ON}
   end;
+  {$IFEND}
+
+  IODataNorthwindClient = interface(IInvokable)
+  ['{92972747-F1C6-42A3-92FA-E61635DE18A1}']
+
+    [GET] [Path('/Customers')] [Consumes(MEDIA_TYPE.JSON)]
+    function GetCustomers([Context] var AResponse: IHttpResponse): TCustomers;
+    ///Orders?$filter=CustomerID eq 'ALFKI'
+    [GET] [Path('/Orders')] [Consumes(MEDIA_TYPE.JSON)]
+    function GetCustomerOrders([QueryParam('$filter')] const AFilter: string; [Context] out AResponse: IHttpResponse): TOrders;
+  end;
 
 implementation
 
-
+{$IF CompilerVersion = 22}
 {$WARNINGS OFF}
 { TODataNorthwindClient }
 
@@ -102,7 +115,7 @@ begin
 end;
 
 {$WARNINGS ON}
-
+{$IFEND}
 { TCustomers }
 
 destructor TCustomers.Destroy;

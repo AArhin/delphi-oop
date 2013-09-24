@@ -52,7 +52,7 @@ type
     property rev: string read Frev write Frev;
   end;
 
-  TCouchDBClient = class(TRESTClient)
+  TCouchDBClient = class(TSvRESTClient)
   public
     [POST]
     [Path('/unittest')]

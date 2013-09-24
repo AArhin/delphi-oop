@@ -14,44 +14,44 @@ uses
   ;
 
 type
-  TRESTClient = class(TInterfacedObject)
+  TSvRESTClient = class(TInterfacedObject)
   private
     FCtx: TRttiContext;
     FURL: string;
     FVMI: TSvVirtualMethodInterceptor;
     FHttp: IHTTPClient;
-    FMethods: TObjectDictionary<Pointer,TRESTMethod>;
+    FMethods: TObjectDictionary<Pointer,TSvRESTMethod>;
     FProxyObject: TObject;
     FProxyTypeInfo: PTypeInfo;
     FDoInvokeMethods: Boolean;
     FAuthentication: IHttpAuthentication;
     FEncodeParameters: Boolean;
-    procedure SetHeaders(const AHasAuth: Boolean; ARestMethod: TRESTMethod);
+    procedure SetHeaders(const AHasAuth: Boolean; ARestMethod: TSvRESTMethod);
   protected
     procedure DoOnAfter(Instance: TObject; Method: TRttiMethod;
       const Args: TArray<TValue>; var Result: TValue);
-    procedure DoRequest(Method: TRttiMethod; const Args: TArray<TValue>; ARestMethod: TRESTMethod;
+    procedure DoRequest(Method: TRttiMethod; const Args: TArray<TValue>; ARestMethod: TSvRESTMethod;
       var Result: TValue); virtual;
-    function InternalDoRequest(Method: TRttiMethod; const Args: TArray<TValue>; ARestMethod: TRESTMethod;
+    function InternalDoRequest(Method: TRttiMethod; const Args: TArray<TValue>; ARestMethod: TSvRESTMethod;
       var AResult: TValue): IHttpResponse; virtual;
 
     function IsMethodMarked(AMethod: TRttiMethod): Boolean;
-    function GetRESTMethod(AMethod: TRttiMethod; AType: TRttiType): TRESTMethod;
+    function GetRESTMethod(AMethod: TRttiMethod; AType: TRttiType): TSvRESTMethod;
     procedure EnumerateRESTMethods();
-    function GenerateUrl(ARestMethod: TRESTMethod): string; virtual;
-    function DoCheckPathParameters(const AUrl: string; ARestMethod: TRESTMethod): string;
-    function GenerateSourceContent(ARestMethod: TRESTMethod): TStream;
-    function GetSerializedDataString(const AValue: TValue; ARestMethod: TRESTMethod): string;
-    function SerializeObjectToString(AObject: TObject; ARestMethod: TRESTMethod): string;
-    procedure FillRestMethodParameters(const Args: TArray<TValue>; ARestMethod: TRESTMethod; AMethod: TRttiMethod);
-    procedure InjectRestMethodOutParameters(const Args: TArray<TValue>; ARestMethod: TRESTMethod; AMethod: TRttiMethod; AResponse: IHttpResponse);
-    function ConsumeMediaType(ARttiType: TRttiType; const ASource: TValue; ARestMethod: TRESTMethod): TValue; virtual;
-    function ConsumeMediaTypeAsString(ARttiType: TRttiType; const ASource: TValue; ARestMethod: TRESTMethod): string; virtual;
+    function GenerateUrl(ARestMethod: TSvRESTMethod): string; virtual;
+    function DoCheckPathParameters(const AUrl: string; ARestMethod: TSvRESTMethod): string;
+    function GenerateSourceContent(ARestMethod: TSvRESTMethod): TStream;
+    function GetSerializedDataString(const AValue: TValue; ARestMethod: TSvRESTMethod): string;
+    function SerializeObjectToString(AObject: TObject; ARestMethod: TSvRESTMethod): string;
+    procedure FillRestMethodParameters(const Args: TArray<TValue>; ARestMethod: TSvRESTMethod; AMethod: TRttiMethod);
+    procedure InjectRestMethodOutParameters(const Args: TArray<TValue>; ARestMethod: TSvRESTMethod; AMethod: TRttiMethod; AResponse: IHttpResponse);
+    function ConsumeMediaType(ARttiType: TRttiType; const ASource: TValue; ARestMethod: TSvRESTMethod): TValue; virtual;
+    function ConsumeMediaTypeAsString(ARttiType: TRttiType; const ASource: TValue; ARestMethod: TSvRESTMethod): string; virtual;
     function UrlEncode(const S: string): string; virtual;
     function UrlEncodeRFC3986(const URL: string): string; virtual;
     function HasAuthentication(): Boolean; virtual;
     function HttpResultOK(AResponseCode: Integer): Boolean; virtual;
-    function OneParamInBody(ARestMethod: TRESTMethod): Boolean;
+    function OneParamInBody(ARestMethod: TSvRESTMethod): Boolean;
   public
     constructor Create(const AUrl: string; AProxyObject: TObject = nil; AProxyType: PTypeInfo = nil); virtual;
     destructor Destroy; override;
@@ -88,7 +88,7 @@ type
 
 { TRESTClient }
 
-function TRESTClient.ConsumeMediaType(ARttiType: TRttiType; const ASource: TValue; ARestMethod: TRESTMethod): TValue;
+function TSvRESTClient.ConsumeMediaType(ARttiType: TRttiType; const ASource: TValue; ARestMethod: TSvRESTMethod): TValue;
 begin
   Result := TValue.Empty;
   if ARttiType <> nil then
@@ -112,8 +112,8 @@ begin
   end;
 end;
 
-function TRESTClient.ConsumeMediaTypeAsString(ARttiType: TRttiType; const ASource: TValue;
-  ARestMethod: TRESTMethod): string;
+function TSvRESTClient.ConsumeMediaTypeAsString(ARttiType: TRttiType; const ASource: TValue;
+  ARestMethod: TSvRESTMethod): string;
 begin
   Result := '';
   if ARttiType <> nil then
@@ -127,7 +127,7 @@ begin
   end;
 end;
 
-constructor TRESTClient.Create(const AUrl: string; AProxyObject: TObject = nil; AProxyType: PTypeInfo = nil);
+constructor TSvRESTClient.Create(const AUrl: string; AProxyObject: TObject = nil; AProxyType: PTypeInfo = nil);
 begin
   inherited Create();
   FProxyObject := AProxyObject;
@@ -142,7 +142,7 @@ begin
   FURL := AUrl;
   FHttp := nil;
   FVMI := TSvVirtualMethodInterceptor.Create(FProxyObject.ClassType);
-  FMethods := TObjectDictionary<Pointer,TRESTMethod>.Create([doOwnsValues]);
+  FMethods := TObjectDictionary<Pointer,TSvRESTMethod>.Create([doOwnsValues]);
 
   FVMI.OnBefore := procedure(Instance: TObject;
     Method: TRttiMethod; const Args: TArray<TValue>; out DoInvoke: Boolean;
@@ -162,7 +162,7 @@ begin
   FVMI.Proxify(FProxyObject);
 end;
 
-destructor TRESTClient.Destroy;
+destructor TSvRESTClient.Destroy;
 begin
   FMethods.Free;
   FVMI.Unproxify(FProxyObject);
@@ -170,7 +170,7 @@ begin
   inherited Destroy;
 end;
 
-function TRESTClient.DoCheckPathParameters(const AUrl: string; ARestMethod: TRESTMethod): string;
+function TSvRESTClient.DoCheckPathParameters(const AUrl: string; ARestMethod: TSvRESTMethod): string;
 var
   i: Integer;
   LPosTokenStart, LPosTokenEnd: Integer;
@@ -201,10 +201,10 @@ begin
   end;
 end;
 
-procedure TRESTClient.DoOnAfter(Instance: TObject; Method: TRttiMethod; const Args: TArray<TValue>;
+procedure TSvRESTClient.DoOnAfter(Instance: TObject; Method: TRttiMethod; const Args: TArray<TValue>;
   var Result: TValue);
 var
-  LMethod: TRESTMethod;
+  LMethod: TSvRESTMethod;
 begin
   if not FMethods.TryGetValue(Method.Handle, LMethod) then
     Exit;
@@ -212,7 +212,7 @@ begin
   DoRequest(Method, Args, LMethod, Result);
 end;
 
-procedure TRESTClient.DoRequest(Method: TRttiMethod; const Args: TArray<TValue>; ARestMethod: TRESTMethod;
+procedure TSvRESTClient.DoRequest(Method: TRttiMethod; const Args: TArray<TValue>; ARestMethod: TSvRESTMethod;
   var Result: TValue);
 var
   LHttpCode: Integer;
@@ -254,7 +254,7 @@ begin
   end;
 end;
 
-procedure TRESTClient.EnumerateRESTMethods;
+procedure TSvRESTClient.EnumerateRESTMethods;
 var
   LType: TRttiType;
   LMethod: TRttiMethod;
@@ -281,11 +281,11 @@ begin
   end;
 end;
 
-procedure TRESTClient.FillRestMethodParameters(const Args: TArray<TValue>; ARestMethod: TRESTMethod; AMethod: TRttiMethod);
+procedure TSvRESTClient.FillRestMethodParameters(const Args: TArray<TValue>; ARestMethod: TSvRESTMethod; AMethod: TRttiMethod);
 var
   i: Integer;
   LParameters: TArray<TRttiParameter>;
-  LRestParam: TRESTMethodParameter;
+  LRestParam: TSvRESTMethodParameter;
   LAttrib: TCustomAttribute;
   LSkip: Boolean;
 begin
@@ -347,11 +347,11 @@ begin
   end;
 end;
 
-function TRESTClient.GenerateSourceContent(ARestMethod: TRESTMethod): TStream;
+function TSvRESTClient.GenerateSourceContent(ARestMethod: TSvRESTMethod): TStream;
 var
   i: Integer;
   LParamValue, LParamName: string;
-  LParameters: TArray<TRESTMethodParameter>;
+  LParameters: TArray<TSvRESTMethodParameter>;
 begin
   if not (ARestMethod.RequestType in [rtPost, rtPut]) then
     Exit(nil);
@@ -385,11 +385,11 @@ begin
   end;
 end;
 
-function TRESTClient.GenerateUrl(ARestMethod: TRESTMethod): string;
+function TSvRESTClient.GenerateUrl(ARestMethod: TSvRESTMethod): string;
 var
   i: Integer;
   LParamValue, LParamName: string;
-  LParameters: TArray<TRESTMethodParameter>;
+  LParameters: TArray<TSvRESTMethodParameter>;
 begin
   Result := FURL;
   if ARestMethod.Path <> '' then
@@ -421,20 +421,20 @@ begin
   end;
 end;
 
-function TRESTClient.GetLastResponseCode: Integer;
+function TSvRESTClient.GetLastResponseCode: Integer;
 begin
   Result := FHttp.GetLastResponseCode;
 end;
 
-function TRESTClient.GetLastResponseText: string;
+function TSvRESTClient.GetLastResponseText: string;
 begin
   Result := FHttp.GetLastResponseText();
 end;
 
-procedure TRESTClient.SetHeaders(const AHasAuth: Boolean; ARestMethod: TRESTMethod);
+procedure TSvRESTClient.SetHeaders(const AHasAuth: Boolean; ARestMethod: TSvRESTMethod);
 var
-  LHeaders: TArray<TRESTMethodParameter>;
-  LHeader: TRESTMethodParameter;
+  LHeaders: TArray<TSvRESTMethodParameter>;
+  LHeader: TSvRESTMethodParameter;
   LName, LValue: string;
 begin
   LHeaders := ARestMethod.GetHeaderParameters();
@@ -456,18 +456,18 @@ begin
   end;
 end;
 
-function TRESTClient.GetRESTMethod(AMethod: TRttiMethod; AType: TRttiType): TRESTMethod;
+function TSvRESTClient.GetRESTMethod(AMethod: TRttiMethod; AType: TRttiType): TSvRESTMethod;
 var
   LAttr: TCustomAttribute;
   LParam: TRttiParameter;
-  LRestParam: TRESTMethodParameter;
+  LRestParam: TSvRESTMethodParameter;
 begin
-  Result := TRESTMethod.Create;
+  Result := TSvRESTMethod.Create;
   Result.Name := AMethod.Name;
 
   for LParam in AMethod.GetParameters do
   begin
-    LRestParam := TRESTMethodParameter.Create;
+    LRestParam := TSvRESTMethodParameter.Create;
     LRestParam.Name := LParam.Name;
     Result.Parameters.Add(LRestParam);
   end;
@@ -476,7 +476,7 @@ begin
   begin
     if LAttr.ClassType = QueryParamNameValueAttribute then
     begin
-      LRestParam := TRESTMethodParameter.Create;
+      LRestParam := TSvRESTMethodParameter.Create;
       LRestParam.Name := QueryParamNameValueAttribute(LAttr).Name;
       LRestParam.Value := QueryParamNameValueAttribute(LAttr).Value;
       Result.Parameters.Add(LRestParam);
@@ -505,7 +505,7 @@ begin
       Result.ProduceMediaType := ProducesAttribute(LAttr).MediaType
     else if LAttr.ClassType = QueryParamNameValueAttribute then
     begin
-      LRestParam := TRESTMethodParameter.Create;
+      LRestParam := TSvRESTMethodParameter.Create;
       LRestParam.Name := QueryParamNameValueAttribute(LAttr).Name;
       LRestParam.Value := QueryParamNameValueAttribute(LAttr).Value;
       Result.Parameters.Add(LRestParam);
@@ -513,7 +513,7 @@ begin
   end;
 end;
 
-function TRESTClient.GetSerializedDataString(const AValue: TValue; ARestMethod: TRESTMethod): string;
+function TSvRESTClient.GetSerializedDataString(const AValue: TValue; ARestMethod: TSvRESTMethod): string;
 var
   LObject: TObject;
 begin
@@ -541,21 +541,21 @@ begin
   end;
 end;
 
-function TRESTClient.HasAuthentication: Boolean;
+function TSvRESTClient.HasAuthentication: Boolean;
 begin
   Result := Assigned(FAuthentication) and (FAuthentication.DoAuthenticate);
 end;
 
-function TRESTClient.HttpResultOK(AResponseCode: Integer): Boolean;
+function TSvRESTClient.HttpResultOK(AResponseCode: Integer): Boolean;
 begin
   Result := (AResponseCode >= 200) and (AResponseCode < 300)
 end;
 
-procedure TRESTClient.InjectRestMethodOutParameters(const Args: TArray<TValue>;
-  ARestMethod: TRESTMethod; AMethod: TRttiMethod; AResponse: IHttpResponse);
+procedure TSvRESTClient.InjectRestMethodOutParameters(const Args: TArray<TValue>;
+  ARestMethod: TSvRESTMethod; AMethod: TRttiMethod; AResponse: IHttpResponse);
 var
   i: Integer;
-  LRestParam: TRESTMethodParameter;
+  LRestParam: TSvRESTMethodParameter;
 begin
   for i := Low(Args) to High(Args) do
   begin
@@ -570,16 +570,16 @@ begin
   end;
 end;
 
-function TRESTClient.InternalDoRequest(Method: TRttiMethod; const Args: TArray<TValue>;
-  ARestMethod: TRESTMethod; var AResult: TValue): IHttpResponse;
+function TSvRESTClient.InternalDoRequest(Method: TRttiMethod; const Args: TArray<TValue>;
+  ARestMethod: TSvRESTMethod; var AResult: TValue): IHttpResponse;
 var
-  LResponse: THttpResponse;
+  LResponse: TSvHttpResponse;
   LResponseStream: TStringStream;
   LSourceContent: TStream;
   LCode: Integer;
   LUrl: string;
 begin
-  LResponse := THttpResponse.Create;
+  LResponse := TSvHttpResponse.Create;
   LResponseStream := TStringStream.Create;
   LSourceContent := GenerateSourceContent(ARestMethod);
   LCode := 0;
@@ -617,12 +617,12 @@ begin
   end;
 end;
 
-function TRESTClient.IsHttps: Boolean;
+function TSvRESTClient.IsHttps: Boolean;
 begin
   Result := StartsText('https', FURL);
 end;
 
-function TRESTClient.IsMethodMarked(AMethod: TRttiMethod): Boolean;
+function TSvRESTClient.IsMethodMarked(AMethod: TRttiMethod): Boolean;
 var
   LAttrib: TCustomAttribute;
 begin
@@ -637,12 +637,12 @@ begin
   Result := False;
 end;
 
-function TRESTClient.OneParamInBody(ARestMethod: TRESTMethod): Boolean;
+function TSvRESTClient.OneParamInBody(ARestMethod: TSvRESTMethod): Boolean;
 begin
   Result := (ARestMethod.Parameters.Count = 1) and (ARestMethod.ProduceMediaType in [MEDIA_TYPE.JSON, MEDIA_TYPE.XML]);
 end;
 
-function TRESTClient.SerializeObjectToString(AObject: TObject; ARestMethod: TRESTMethod): string;
+function TSvRESTClient.SerializeObjectToString(AObject: TObject; ARestMethod: TSvRESTMethod): string;
 begin
   Result := '';
   case ARestMethod.ProduceMediaType of
@@ -651,15 +651,15 @@ begin
   end;
 end;
 
-procedure TRESTClient.SetHttpClient(const AHttpClientName: string);
+procedure TSvRESTClient.SetHttpClient(const AHttpClientName: string);
 begin
-  FHttp := THTTPClientFactory.GetInstance(AHttpClientName);
+  FHttp := TSvHTTPClientFactory.GetInstance(AHttpClientName);
   if IsHttps then
     FHttp.SetUpHttps();
 end;
 
 
-function TRESTClient.UrlEncode(const S: string): string;
+function TSvRESTClient.UrlEncode(const S: string): string;
 var
   Ch : Char;
 begin
@@ -676,12 +676,12 @@ begin
   end;
 end;
 
-function TRESTClient.UrlEncodeRFC3986(const URL: string): string;
+function TSvRESTClient.UrlEncodeRFC3986(const URL: string): string;
 var
   URL1: string;
 begin
   URL1 := URLEncode(URL);
-  URL1 := StringReplace(URL1, '', '+', [rfReplaceAll, rfIgnoreCase]);
+  URL1 := StringReplace(URL1, ' ', '+', [rfReplaceAll, rfIgnoreCase]);
   Result := URL1;
 end;
 

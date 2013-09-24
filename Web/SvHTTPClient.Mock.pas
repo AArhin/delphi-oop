@@ -145,6 +145,6 @@ begin
 end;
 
 initialization
-  THTTPClientFactory.RegisterHTTPClient(HTTP_CLIENT_MOCK, TMockHttpClient);
+  TSvHTTPClientFactory.RegisterHTTPClient(HTTP_CLIENT_MOCK, TMockHttpClient);
 
 end.

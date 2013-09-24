@@ -71,7 +71,7 @@ type
   end;
 
   [Path('/neighboursJSON')]
-  TGeonamesClient = class(TRESTClient)
+  TGeonamesClient = class(TSvRESTClient)
   public
     [GET]
     [Consumes(MEDIA_TYPE.JSON)]

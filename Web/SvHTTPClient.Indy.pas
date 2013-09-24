@@ -207,6 +207,6 @@ begin
 end;
 
 initialization
-  THTTPClientFactory.RegisterHTTPClient(HTTP_CLIENT_INDY, TIndyHTTPClient);
+  TSvHTTPClientFactory.RegisterHTTPClient(HTTP_CLIENT_INDY, TIndyHTTPClient);
 
 end.
