@@ -25,8 +25,6 @@ object frmOData: TfrmOData
     TabOrder = 0
     object tsCustomers: TTabSheet
       Caption = 'Customers'
-      ExplicitWidth = 720
-      ExplicitHeight = 515
       object vtCustomers: TVirtualStringTree
         Left = 0
         Top = 0
@@ -175,7 +173,21 @@ object frmOData: TfrmOData
         Width = 981
         Height = 496
         Align = alClient
+        BorderStyle = bsNone
         ScrollBars = ssVertical
+        TabOrder = 0
+      end
+    end
+    object tsHeaders: TTabSheet
+      Caption = 'Response Headers'
+      ImageIndex = 3
+      object mmoHeaders: TMemo
+        Left = 0
+        Top = 0
+        Width = 981
+        Height = 496
+        Align = alClient
+        BorderStyle = bsNone
         TabOrder = 0
       end
     end
@@ -189,9 +201,6 @@ object frmOData: TfrmOData
     BevelOuter = bvNone
     ShowCaption = False
     TabOrder = 1
-    ExplicitLeft = 272
-    ExplicitTop = 240
-    ExplicitWidth = 185
     object btnGet: TButton
       Left = 4
       Top = 7
@@ -201,22 +210,13 @@ object frmOData: TfrmOData
       TabOrder = 0
       OnClick = btnGetClick
     end
-    object btnGetJSON: TButton
-      Left = 191
-      Top = 7
-      Width = 162
-      Height = 23
-      Caption = 'Get customers as JSON'
-      TabOrder = 1
-      OnClick = btnGetJSONClick
-    end
     object btnGetOrders: TButton
-      Left = 359
+      Left = 191
       Top = 7
       Width = 185
       Height = 23
       Caption = 'Get Selected Customer Orders'
-      TabOrder = 2
+      TabOrder = 1
       OnClick = btnGetOrdersClick
     end
   end

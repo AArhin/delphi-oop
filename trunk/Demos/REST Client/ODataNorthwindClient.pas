@@ -78,13 +78,10 @@ type
   public
     [GET] [Path('/Customers')] [Consumes(MEDIA_TYPE.JSON)]
     {$WARNINGS OFF}
-    function GetCustomers(): TCustomers; virtual;
+    function GetCustomers([Context] out AResponse: IHttpResponse): TCustomers; virtual;
     ///Orders?$filter=CustomerID eq 'ALFKI'
     [GET] [Path('/Orders')] [Consumes(MEDIA_TYPE.JSON)]
-    function GetCustomerOrders([QueryParam('$filter')] const AFilter: string): TOrders; virtual;
-
-    [GET] [Path('/Customers')] [Consumes(MEDIA_TYPE.JSON)]
-    function GetCustomersJSON(): string; virtual;
+    function GetCustomerOrders([QueryParam('$filter')] const AFilter: string; [Context] out AResponse: IHttpResponse): TOrders; virtual;
     {$WARNINGS ON}
   end;
 
@@ -94,22 +91,17 @@ implementation
 {$WARNINGS OFF}
 { TODataNorthwindClient }
 
-function TODataNorthwindClient.GetCustomerOrders(const AFilter: string): TOrders;
+function TODataNorthwindClient.GetCustomerOrders(const AFilter: string; out AResponse: IHttpResponse): TOrders;
 begin
   //
 end;
 
-function TODataNorthwindClient.GetCustomers: TCustomers;
+function TODataNorthwindClient.GetCustomers(out AResponse: IHttpResponse): TCustomers;
 begin
   //
 end;
 
 {$WARNINGS ON}
-
-function TODataNorthwindClient.GetCustomersJSON: string;
-begin
-  //
-end;
 
 { TCustomers }
 

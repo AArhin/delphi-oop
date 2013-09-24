@@ -18,11 +18,13 @@ type
     FIsNameless: Boolean;
     FIsDisabled: Boolean;
     FParamType: TParameterType;
+    FIsInjectable: Boolean;
   public
     function ToString(): string; reintroduce;
 
     property IsDisabled: Boolean read FIsDisabled write FIsDisabled;
     property IsNameless: Boolean read FIsNameless write FIsNameless;
+    property IsInjectable: Boolean read FIsInjectable write FIsInjectable;
     property Name: string read FName write FName;
     property ParamType: TParameterType read FParamType write FParamType;
     property Value: TValue read FValue write FValue;
