@@ -36,7 +36,7 @@ _Note that our declared types must be correctly mapped with data structures prod
 Define our REST client:
 
 {{{  
-  TODataNorthwindClient = class(TRESTClient)
+  TODataNorthwindClient = class(TSvRESTClient)
   public
     [GET] [Path('/Customers')] [Consumes(MEDIA_TYPE.JSON)]
     function GetCustomers(): TCustomers; virtual;
@@ -52,7 +52,7 @@ Or if you use Delphi XE2 or higher define an interface:
   end;
 }}}
 
-As you see, our `TODataNorthwindClient` should inherit from `TRESTClient` class. If you are using XE2 or higher you only need to define your interface, there is no need to inherit from any other class. Attributes are used here to define various properties which will be used by our client, e.g. `[Consumes(MEDIA_TYPE.JSON)]` and function return type specifies that `TRestClient` will automatically deserialize received json string from the server into `TODataNorthwindClient` instance, `[GET]` specifies that GET HTTP method will be used, `[Path('/Customers')]` specifies relative path from the base URL.
+As you see, our `TODataNorthwindClient` should inherit from `TSvRESTClient` class. If you are using XE2 or higher you only need to define your interface, there is no need to inherit from any other class. Attributes are used here to define various properties which will be used by our client, e.g. `[Consumes(MEDIA_TYPE.JSON)]` and function return type specifies that `TSvRESTClient` will automatically deserialize received json string from the server into `TODataNorthwindClient` instance, `[GET]` specifies that GET HTTP method will be used, `[Path('/Customers')]` specifies relative path from the base URL.
 
 That's it. Now we just need to create our client and call `GetCustomers()` method:
 
