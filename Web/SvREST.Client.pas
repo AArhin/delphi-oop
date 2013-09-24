@@ -26,21 +26,17 @@ type
     FDoInvokeMethods: Boolean;
     FAuthentication: IHttpAuthentication;
     FEncodeParameters: Boolean;
+    procedure SetHeaders(const AHasAuth: Boolean; ARestMethod: TRESTMethod);
   protected
     procedure DoOnAfter(Instance: TObject; Method: TRttiMethod;
       const Args: TArray<TValue>; var Result: TValue);
     procedure DoRequest(Method: TRttiMethod; const Args: TArray<TValue>; ARestMethod: TRESTMethod;
       var Result: TValue); virtual;
-    function DoGetRequest(Method: TRttiMethod; const Args: TArray<TValue>; ARestMethod: TRESTMethod;
-      var AResult: TValue): Integer; virtual;
-    function DoPostRequest(Method: TRttiMethod; const Args: TArray<TValue>; ARestMethod: TRESTMethod;
-      var AResult: TValue): Integer; virtual;
-    function DoPutRequest(Method: TRttiMethod; const Args: TArray<TValue>; ARestMethod: TRESTMethod;
-      var AResult: TValue): Integer; virtual;
-    function DoDeleteRequest(ARestMethod: TRESTMethod; var AResult: TValue): Integer; virtual;
+    function InternalDoRequest(Method: TRttiMethod; const Args: TArray<TValue>; ARestMethod: TRESTMethod;
+      var AResult: TValue): IHttpResponse; virtual;
+
     function IsMethodMarked(AMethod: TRttiMethod): Boolean;
     function GetRESTMethod(AMethod: TRttiMethod; AType: TRttiType): TRESTMethod;
-    function GetRequestType(AMethod: TRttiMethod): TRequestType;
     procedure EnumerateRESTMethods();
     function GenerateUrl(ARestMethod: TRESTMethod): string; virtual;
     function DoCheckPathParameters(const AUrl: string; ARestMethod: TRESTMethod): string;
@@ -83,6 +79,7 @@ uses
   ,StrUtils
   ,SvHTTPClient.Factory
   ,SvHTTP.Attributes
+  ,SvHTTPClient.Response
   ;
 
 type
@@ -203,40 +200,6 @@ begin
   end;
 end;
 
-function TRESTClient.DoDeleteRequest(ARestMethod: TRESTMethod; var AResult: TValue): Integer;
-begin
-  try
-    Result := FHttp.Delete(ARestMethod.Url);
-  except
-    Result := GetLastResponseCode;
-  end;
-end;
-
-function TRESTClient.DoGetRequest(Method: TRttiMethod; const Args: TArray<TValue>;
-  ARestMethod: TRESTMethod; var AResult: TValue): Integer;
-var
-  LResponse: TStringStream;
-begin
-  LResponse := TStringStream.Create;
-  try
-    try
-      Result := FHttp.Get(ARestMethod.Url, LResponse);
-    except
-      Result := GetLastResponseCode();
-    end;
-
-    if HttpResultOK(Result) then
-    begin
-      if LResponse.Size > 0 then
-      begin
-        AResult := ConsumeMediaType(Method.ReturnType, LResponse, ARestMethod);
-      end;
-    end;
-  finally
-    LResponse.Free;
-  end;
-end;
-
 procedure TRESTClient.DoOnAfter(Instance: TObject; Method: TRttiMethod; const Args: TArray<TValue>;
   var Result: TValue);
 var
@@ -248,86 +211,23 @@ begin
   DoRequest(Method, Args, LMethod, Result);
 end;
 
-function TRESTClient.DoPostRequest(Method: TRttiMethod; const Args: TArray<TValue>;
-  ARestMethod: TRESTMethod; var AResult: TValue): Integer;
-var
-  LResponse: TStringStream;
-  LSourceContent: TStream;
-begin
-  LResponse := TStringStream.Create;
-  LSourceContent := GenerateSourceContent(ARestMethod);
-  try
-    try
-      Result := FHttp.Post(ARestMethod.Url, LResponse, LSourceContent);
-    except
-      Result := GetLastResponseCode;
-    end;
-
-    if HttpResultOK(Result) then
-    begin
-      if LResponse.Size > 0 then
-      begin
-        AResult := ConsumeMediaType(Method.ReturnType, LResponse, ARestMethod);
-      end;
-    end;
-  finally
-    LSourceContent.Free;
-    LResponse.Free;
-  end;
-end;
-
-function TRESTClient.DoPutRequest(Method: TRttiMethod;
-  const Args: TArray<TValue>; ARestMethod: TRESTMethod; var AResult: TValue): Integer;
-var
-  LResponse: TStringStream;
-  LSourceContent: TStream;
-begin
-  LResponse := TStringStream.Create;
-  LSourceContent := GenerateSourceContent(ARestMethod);
-  try
-    try
-      Result :=  FHttp.Put(ARestMethod.Url, LResponse, LSourceContent);
-    except
-      Result := GetLastResponseCode;
-    end;
-    if HttpResultOK(Result) then
-    begin
-      if LResponse.Size > 0 then
-      begin
-        AResult := ConsumeMediaType(Method.ReturnType, LResponse, ARestMethod);
-      end;
-    end;
-  finally
-    LSourceContent.Free;
-    LResponse.Free;
-  end;
-end;
-
 procedure TRESTClient.DoRequest(Method: TRttiMethod; const Args: TArray<TValue>; ARestMethod: TRESTMethod;
   var Result: TValue);
 var
   LHttpCode: Integer;
   LHasAuth: Boolean;
+  LResponse: IHttpResponse;
 begin
   FillRestMethodParameters(Args, ARestMethod, Method);
   FHttp.ConsumeMediaType := ARestMethod.ConsumeMediaType;
   FHttp.ProduceMediaType := ARestMethod.ProduceMediaType;
 
   LHasAuth := HasAuthentication;
-  if LHasAuth then
-  begin
-    FHttp.SetCustomRequestHeader(FAuthentication.GetCustomRequestHeader);
-  end;
+  SetHeaders(LHasAuth, ARestMethod);
 
   ARestMethod.Url := GenerateUrl(ARestMethod);
-  LHttpCode := 0;
-
-  case ARestMethod.RequestType of
-    rtGet: LHttpCode := DoGetRequest(Method, Args, ARestMethod, Result);
-    rtPost: LHttpCode := DoPostRequest(Method, Args, ARestMethod, Result);
-    rtPut: LHttpCode := DoPutRequest(Method, Args, ARestMethod, Result);
-    rtDelete: LHttpCode := DoDeleteRequest(ARestMethod, Result);
-  end;
+  LResponse := InternalDoRequest(Method, Args, ARestMethod, Result);
+  LHttpCode := LResponse.GetResponseCode;
 
   if HttpResultOK(LHttpCode) then
     Exit;
@@ -414,6 +314,14 @@ begin
         if (QueryParamAttribute(LAttrib).Name <> '') then
           ARestMethod.Parameters[i].Name := QueryParamAttribute(LAttrib).Name;
         ARestMethod.Parameters[i].Value := ConsumeMediaTypeAsString(LParameters[i].ParamType, Args[i], ARestMethod);
+      end
+      else if (LAttrib.ClassType = HeaderParamAttribute) then
+      begin
+        ARestMethod.Parameters[i].IsNameless := False;
+        ARestMethod.Parameters[i].ParamType := ptHeader;
+        if (HeaderParamAttribute(LAttrib).Name <> '') then
+          ARestMethod.Parameters[i].Name := HeaderParamAttribute(LAttrib).Name;
+        ARestMethod.Parameters[i].Value := ConsumeMediaTypeAsString(LParameters[i].ParamType, Args[i], ARestMethod);
       end;
     end;
 
@@ -435,6 +343,9 @@ var
   LParamValue, LParamName: string;
   LParameters: TArray<TRESTMethodParameter>;
 begin
+  if not (ARestMethod.RequestType in [rtPost, rtPut]) then
+    Exit(nil);
+
   Result := TStringStream.Create('', TEncoding.UTF8);
 
   LParameters := ARestMethod.GetEnabledParameters();
@@ -510,22 +421,29 @@ begin
   Result := FHttp.GetLastResponseText();
 end;
 
-function TRESTClient.GetRequestType(AMethod: TRttiMethod): TRequestType;
+procedure TRESTClient.SetHeaders(const AHasAuth: Boolean; ARestMethod: TRESTMethod);
 var
-  LAttrib: TCustomAttribute;
+  LHeaders: TArray<TRESTMethodParameter>;
+  LHeader: TRESTMethodParameter;
+  LName, LValue: string;
 begin
-  for LAttrib in AMethod.GetAttributes do
+  LHeaders := ARestMethod.GetHeaderParameters();
+  for LHeader in LHeaders do
   begin
-    if LAttrib is GETAttribute then
-      Exit(rtGet)
-    else if LAttrib is POSTAttribute then
-      Exit(rtPost)
-    else if LAttrib is PUTAttribute then
-      Exit(rtPut)
-    else if LAttrib is DELETEAttribute then
-      Exit(rtDelete);
+    LName := LHeader.Name;
+    LValue := LHeader.ToString;
+    if FEncodeParameters then
+    begin
+      LName := UrlEncodeRFC3986(LName);
+      LValue := UrlEncodeRFC3986(LValue);
+    end;
+    FHttp.SetCustomRequestHeader(Format('%S: %S', [LName, LValue]));
   end;
-  Result := rtGet;
+
+  if AHasAuth then
+  begin
+    FHttp.SetCustomRequestHeader(FAuthentication.GetCustomRequestHeader);
+  end;
 end;
 
 function TRESTClient.GetRESTMethod(AMethod: TRttiMethod; AType: TRttiType): TRESTMethod;
@@ -565,6 +483,10 @@ begin
       Result.RequestType := rtPut
     else if LAttr is DELETEAttribute then
       Result.RequestType := rtDelete
+    else if LAttr.ClassType = HEADAttribute then
+      Result.RequestType := rtHead
+    else if LAttr.ClassType = OPTIONSAttribute then
+      Result.RequestType := rtOptions
     else if LAttr is PathAttribute then
       Result.Path := PathAttribute(LAttr).Path
     else if LAttr.ClassType = ConsumesAttribute then
@@ -619,6 +541,53 @@ begin
   Result := (AResponseCode >= 200) and (AResponseCode < 300)
 end;
 
+function TRESTClient.InternalDoRequest(Method: TRttiMethod; const Args: TArray<TValue>;
+  ARestMethod: TRESTMethod; var AResult: TValue): IHttpResponse;
+var
+  LResponse: THttpResponse;
+  LResponseStream: TStringStream;
+  LSourceContent: TStream;
+  LCode: Integer;
+  LUrl: string;
+begin
+  LResponse := THttpResponse.Create;
+  LResponseStream := TStringStream.Create;
+  LSourceContent := GenerateSourceContent(ARestMethod);
+  LCode := 0;
+  try
+    LUrl := ARestMethod.Url;
+    try
+      case ARestMethod.RequestType of
+        rtGet: LCode := FHttp.Get(LUrl, LResponseStream);
+        rtPost: LCode := FHttp.Post(LUrl, LResponseStream, LSourceContent);
+        rtPut: LCode := FHttp.Put(LUrl, LResponseStream, LSourceContent);
+        rtDelete: LCode := FHttp.Delete(LUrl);
+        rtHead: LCode := FHttp.Head(LUrl);
+        rtOptions: LCode := FHttp.Options(LUrl);
+      end;
+    except
+      LCode := GetLastResponseCode();
+    end;
+
+    LResponse.ResponseCode := LCode;
+    LResponse.ResponseStream := LResponseStream;
+    LResponse.Headers := FHttp.GetLastResponseHeaders;
+
+    if HttpResultOK(LCode) then
+    begin
+      if LResponseStream.Size > 0 then
+      begin
+        AResult := ConsumeMediaType(Method.ReturnType, LResponseStream, ARestMethod);
+      end;
+    end;
+
+  finally
+    Result := LResponse;
+    LResponseStream.Free;
+    LSourceContent.Free;
+  end;
+end;
+
 function TRESTClient.IsHttps: Boolean;
 begin
   Result := StartsText('https', FURL);
@@ -631,7 +600,8 @@ begin
   for LAttrib in AMethod.GetAttributes do
   begin
     Result := (LAttrib is GETAttribute) or (LAttrib is POSTAttribute)
-      or (LAttrib is DELETEAttribute) or (LAttrib is PUTAttribute);
+      or (LAttrib is DELETEAttribute) or (LAttrib is PUTAttribute) or (LAttrib is HEADAttribute)
+      or (LAttrib is OPTIONSAttribute);
     if Result then
       Exit;
   end;

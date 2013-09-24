@@ -33,11 +33,14 @@ type
 
     function GetLastResponseCode(): Integer; override;
     function GetLastResponseText(): string; override;
+    function GetLastResponseHeaders(): string; override;
 
     function Delete(const AUrl: string): Integer; override;
     function Get(const AUrl: string; AResponse: TStream): Integer; override;
     function Post(const AUrl: string; AResponse: TStream; ASourceContent: TStream): Integer; override;
     function Put(const AUrl: string; AResponse: TStream; ASourceContent: TStream): Integer; override;
+    function Head(const AUrl: string): Integer; override;
+    function Options(const AUrl: string): Integer; override;
 
     procedure SetUpHttps(); override;
   end;
@@ -139,6 +142,11 @@ begin
   Result := FClient.ResponseCode;
 end;
 
+function TIndyHTTPClient.GetLastResponseHeaders: string;
+begin
+  Result := FClient.Response.RawHeaders.Text;
+end;
+
 function TIndyHTTPClient.GetLastResponseText: string;
 begin
   Result := FClient.ResponseText;
@@ -147,6 +155,18 @@ end;
 function TIndyHTTPClient.GetProduceMediaType: MEDIA_TYPE;
 begin
   Result := FProduceMediaType;
+end;
+
+function TIndyHTTPClient.Head(const AUrl: string): Integer;
+begin
+  FClient.Head(AUrl);
+  Result := FClient.ResponseCode;
+end;
+
+function TIndyHTTPClient.Options(const AUrl: string): Integer;
+begin
+  FClient.Options(AUrl);
+  Result := FClient.ResponseCode;
 end;
 
 function TIndyHTTPClient.Post(const AUrl: string; AResponse, ASourceContent: TStream): Integer;
