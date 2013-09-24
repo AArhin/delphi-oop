@@ -53,7 +53,7 @@ type
     function HttpResultOK(AResponseCode: Integer): Boolean; virtual;
     function OneParamInBody(ARestMethod: TSvRESTMethod): Boolean;
   public
-    constructor Create(const AUrl: string; AProxyObject: TObject = nil; AProxyType: PTypeInfo = nil); virtual;
+    constructor Create(const ABaseUrl: string; AProxyObject: TObject = nil; AProxyType: PTypeInfo = nil); virtual;
     destructor Destroy; override;
 
     procedure SetHttpClient(const AHttpClientName: string = HTTP_CLIENT_INDY);
@@ -127,7 +127,7 @@ begin
   end;
 end;
 
-constructor TSvRESTClient.Create(const AUrl: string; AProxyObject: TObject = nil; AProxyType: PTypeInfo = nil);
+constructor TSvRESTClient.Create(const ABaseUrl: string; AProxyObject: TObject = nil; AProxyType: PTypeInfo = nil);
 begin
   inherited Create();
   FProxyObject := AProxyObject;
@@ -139,7 +139,7 @@ begin
     FProxyTypeInfo := Self.ClassInfo;
 
   FCtx := TRttiContext.Create;
-  FURL := AUrl;
+  FURL := ABaseUrl;
   FHttp := nil;
   FVMI := TSvVirtualMethodInterceptor.Create(FProxyObject.ClassType);
   FMethods := TObjectDictionary<Pointer,TSvRESTMethod>.Create([doOwnsValues]);

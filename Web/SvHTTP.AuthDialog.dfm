@@ -24,10 +24,6 @@ object frmAuthDialog: TfrmAuthDialog
     BevelOuter = bvNone
     ShowCaption = False
     TabOrder = 0
-    ExplicitLeft = 256
-    ExplicitTop = 64
-    ExplicitWidth = 185
-    ExplicitHeight = 41
     object wbBrowser: TWebBrowser
       Left = 0
       Top = 0
@@ -35,6 +31,7 @@ object frmAuthDialog: TfrmAuthDialog
       Height = 440
       Align = alClient
       TabOrder = 0
+      OnNavigateComplete2 = wbBrowserNavigateComplete2
       ExplicitLeft = 192
       ExplicitTop = 128
       ExplicitWidth = 300
@@ -62,14 +59,14 @@ object frmAuthDialog: TfrmAuthDialog
     object lblHint: TLabel
       Left = 8
       Top = 9
-      Width = 111
+      Width = 290
       Height = 13
-      Caption = 'Paste given code here:'
+      Caption = 'Paste given code here if window hasn'#39't closed automatically:'
     end
     object edToken: TEdit
-      Left = 141
+      Left = 368
       Top = 6
-      Width = 493
+      Width = 266
       Height = 21
       Anchors = [akLeft, akTop, akRight]
       TabOrder = 0
