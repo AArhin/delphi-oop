@@ -15,16 +15,16 @@ type
     vtCustomers: TVirtualStringTree;
     tsJson: TTabSheet;
     mmoJSON: TMemo;
-    btnGetJSON: TButton;
     tsOrders: TTabSheet;
     btnGetOrders: TButton;
     vtOrders: TVirtualStringTree;
+    tsHeaders: TTabSheet;
+    mmoHeaders: TMemo;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure btnGetClick(Sender: TObject);
     procedure vtCustomersGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex;
       TextType: TVSTTextType; var CellText: string);
-    procedure btnGetJSONClick(Sender: TObject);
     procedure btnGetOrdersClick(Sender: TObject);
     procedure vtOrdersGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex;
       TextType: TVSTTextType; var CellText: string);
@@ -35,6 +35,7 @@ type
     FCustomers: TCustomers;
     FOrders: TOrders;
   protected
+    procedure DoGetCustomers();
     procedure DoGetOrders();
   public
     { Public declarations }
@@ -48,22 +49,14 @@ implementation
 uses
   SvWeb.Consts
   ,SvHTTPClient.Indy
+  ,SvHTTPClientInterface
   ;
 
 {$R *.dfm}
 
 procedure TfrmOData.btnGetClick(Sender: TObject);
 begin
-  FCustomers.Free;
-  FCustomers := FRestClient.GetCustomers();
-  vtCustomers.RootNodeCount := FCustomers.Value.Count;
-  pcData.ActivePageIndex := 0;
-end;
-
-procedure TfrmOData.btnGetJSONClick(Sender: TObject);
-begin
-  mmoJSON.Lines.Text := FRestClient.GetCustomersJSON;
-  pcData.ActivePageIndex := 2;
+  DoGetCustomers();
 end;
 
 procedure TfrmOData.btnGetOrdersClick(Sender: TObject);
@@ -74,15 +67,30 @@ end;
 procedure TfrmOData.DoGetOrders;
 var
   LCustomer: TCustomer;
+  LResponse: IHttpResponse;
 begin
   if not Assigned(vtCustomers.FocusedNode) then
     Exit;
 
   LCustomer := FCustomers.Value[vtCustomers.FocusedNode.Index];
   FOrders.Free;
-  FOrders := FRestClient.GetCustomerOrders(Format('CustomerID eq %S', [QuotedStr(LCustomer.CustomerId)]));
+  FOrders := FRestClient.GetCustomerOrders( Format('CustomerID eq %S', [QuotedStr(LCustomer.CustomerId)]), LResponse );
+  mmoJSON.Lines.Text := LResponse.GetResponseText;
+  mmoHeaders.Lines.Text := LResponse.GetHeadersText;
   vtOrders.RootNodeCount := FOrders.Value.Count;
   pcData.ActivePageIndex := 1;
+end;
+
+procedure TfrmOData.DoGetCustomers;
+var
+  LResponse: IHttpResponse;
+begin
+  FCustomers.Free;
+  FCustomers := FRestClient.GetCustomers(LResponse);
+  mmoJSON.Lines.Text := LResponse.GetResponseText;
+  mmoHeaders.Lines.Text := LResponse.GetHeadersText;
+  vtCustomers.RootNodeCount := FCustomers.Value.Count;
+  pcData.ActivePageIndex := 0;
 end;
 
 procedure TfrmOData.FormCreate(Sender: TObject);

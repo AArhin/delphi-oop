@@ -29,6 +29,14 @@ type
     function Get(const AUrl: string; AResponse: TStream): Integer; override;
     function Post(const AUrl: string; AResponse: TStream; ASourceContent: TStream): Integer; override;
     function Put(const AUrl: string; AResponse: TStream; ASourceContent: TStream): Integer; override;
+    function Head(const AUrl: string): Integer; override;
+    function Options(const AUrl: string): Integer; override;
+
+    procedure SetUpHttps(); override;
+    function GetLastResponseCode(): Integer; override;
+    function GetLastResponseText(): string; override;
+    function GetLastResponseHeaders(): string; override;
+
   end;
 
 implementation
@@ -79,9 +87,34 @@ begin
   Result := FConsumeMediaType;
 end;
 
+function TMockHttpClient.GetLastResponseCode: Integer;
+begin
+  Result := 200;
+end;
+
+function TMockHttpClient.GetLastResponseHeaders: string;
+begin
+  Result := '';
+end;
+
+function TMockHttpClient.GetLastResponseText: string;
+begin
+  Result := '';
+end;
+
 function TMockHttpClient.GetProduceMediaType: MEDIA_TYPE;
 begin
   Result := FProduceMediaType;
+end;
+
+function TMockHttpClient.Head(const AUrl: string): Integer;
+begin
+  Result := 200;
+end;
+
+function TMockHttpClient.Options(const AUrl: string): Integer;
+begin
+  Result := 200;
 end;
 
 function TMockHttpClient.Post(const AUrl: string; AResponse,
@@ -104,6 +137,11 @@ end;
 procedure TMockHttpClient.SetProduceMediaType(const Value: MEDIA_TYPE);
 begin
   FProduceMediaType := Value;
+end;
+
+procedure TMockHttpClient.SetUpHttps;
+begin
+  inherited;
 end;
 
 initialization

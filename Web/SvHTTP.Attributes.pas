@@ -47,6 +47,10 @@ type
 
   end;
 
+  ContextAttribute = class(TCustomAttribute)
+
+  end;
+
   {$REGION 'Documentation'}
   ///	<summary>
   ///	  Notifies that method parameter will be used as a request parameter with

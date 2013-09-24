@@ -47,7 +47,7 @@ type
     [GET]
     [Consumes(MEDIA_TYPE.JSON)]
     [QueryParamNameValue('series', '2210')]
-    function GetITJobs(): TJobs; virtual;
+    function GetITJobs([Context] out AResponse: IHttpResponse): TJobs; virtual;
   end;
 
   TOrderDetail = class
@@ -114,10 +114,13 @@ uses
 procedure TUSAJobsIntegrationTests.GetITJobs;
 var
   LJobs: TJobs;
+  LResponse: IHttpResponse;
 begin
-  LJobs := FRESTClient.GetITJobs();
+  LResponse := nil;
+  LJobs := FRESTClient.GetITJobs(LResponse);
   try
     CheckTrue(LJobs.JobData <> nil);
+    CheckTrue(Assigned(LResponse));
 
     CheckTrue( ContainsText(FRESTClient.FLastURL, 'series=2210') );
     CheckTrue( ContainsText(FRESTClient.FLastURL, 'Page=1') );
@@ -148,7 +151,7 @@ begin
 end;
 
 {$WARNINGS OFF}
-function TUsaJobsRESTClient.GetITJobs(): TJobs;
+function TUsaJobsRESTClient.GetITJobs(out AResponse: IHttpResponse): TJobs;
 begin
   //do nothing
 end;

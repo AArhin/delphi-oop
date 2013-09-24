@@ -44,6 +44,7 @@ type
     function GetSerializedDataString(const AValue: TValue; ARestMethod: TRESTMethod): string;
     function SerializeObjectToString(AObject: TObject; ARestMethod: TRESTMethod): string;
     procedure FillRestMethodParameters(const Args: TArray<TValue>; ARestMethod: TRESTMethod; AMethod: TRttiMethod);
+    procedure InjectRestMethodOutParameters(const Args: TArray<TValue>; ARestMethod: TRESTMethod; AMethod: TRttiMethod; AResponse: IHttpResponse);
     function ConsumeMediaType(ARttiType: TRttiType; const ASource: TValue; ARestMethod: TRESTMethod): TValue; virtual;
     function ConsumeMediaTypeAsString(ARttiType: TRttiType; const ASource: TValue; ARestMethod: TRESTMethod): string; virtual;
     function UrlEncode(const S: string): string; virtual;
@@ -227,6 +228,7 @@ begin
 
   ARestMethod.Url := GenerateUrl(ARestMethod);
   LResponse := InternalDoRequest(Method, Args, ARestMethod, Result);
+  InjectRestMethodOutParameters(Args, ARestMethod, Method, LResponse);
   LHttpCode := LResponse.GetResponseCode;
 
   if HttpResultOK(LHttpCode) then
@@ -283,6 +285,7 @@ procedure TRESTClient.FillRestMethodParameters(const Args: TArray<TValue>; ARest
 var
   i: Integer;
   LParameters: TArray<TRttiParameter>;
+  LRestParam: TRESTMethodParameter;
   LAttrib: TCustomAttribute;
   LSkip: Boolean;
 begin
@@ -290,49 +293,56 @@ begin
   for i := Low(Args) to High(Args) do
   begin
     LSkip := False;
-    ARestMethod.Parameters[i].IsDisabled := False;
-    ARestMethod.Parameters[i].Value := TValue.Empty;
+    LRestParam := ARestMethod.Parameters[i];
+    LRestParam.IsDisabled := False;
+    LRestParam.IsInjectable := False;
+    LRestParam.Value := TValue.Empty;
     for LAttrib in LParameters[i].GetAttributes do
     begin
-      if LAttrib.ClassType = TransientParamAttribute then
+      if (LAttrib.ClassType = TransientParamAttribute) then
         LSkip := True
+      else if (LAttrib.ClassType = ContextAttribute) then
+      begin
+        LSkip := True;
+        LRestParam.IsInjectable := True;
+      end
       else if LAttrib.ClassType = BodyParamAttribute then
       begin
-        ARestMethod.Parameters[i].IsNameless := True;
-        ARestMethod.Parameters[i].Name := '';
-        ARestMethod.Parameters[i].Value := ConsumeMediaTypeAsString(LParameters[i].ParamType, Args[i], ARestMethod);
+        LRestParam.IsNameless := True;
+        LRestParam.Name := '';
+        LRestParam.Value := ConsumeMediaTypeAsString(LParameters[i].ParamType, Args[i], ARestMethod);
       end
       else if LAttrib.ClassType = QueryParamNameValueAttribute then
       begin
-        ARestMethod.Parameters[i].IsNameless := False;
-        ARestMethod.Parameters[i].Name := QueryParamNameValueAttribute(LAttrib).Name;
-        ARestMethod.Parameters[i].Value := QueryParamNameValueAttribute(LAttrib).Value;
+        LRestParam.IsNameless := False;
+        LRestParam.Name := QueryParamNameValueAttribute(LAttrib).Name;
+        LRestParam.Value := QueryParamNameValueAttribute(LAttrib).Value;
       end
       else if (LAttrib.ClassType = QueryParamAttribute) then
       begin
-        ARestMethod.Parameters[i].IsNameless := False;
+        LRestParam.IsNameless := False;
         if (QueryParamAttribute(LAttrib).Name <> '') then
-          ARestMethod.Parameters[i].Name := QueryParamAttribute(LAttrib).Name;
-        ARestMethod.Parameters[i].Value := ConsumeMediaTypeAsString(LParameters[i].ParamType, Args[i], ARestMethod);
+          LRestParam.Name := QueryParamAttribute(LAttrib).Name;
+        LRestParam.Value := ConsumeMediaTypeAsString(LParameters[i].ParamType, Args[i], ARestMethod);
       end
       else if (LAttrib.ClassType = HeaderParamAttribute) then
       begin
-        ARestMethod.Parameters[i].IsNameless := False;
-        ARestMethod.Parameters[i].ParamType := ptHeader;
+        LRestParam.IsNameless := False;
+        LRestParam.ParamType := ptHeader;
         if (HeaderParamAttribute(LAttrib).Name <> '') then
-          ARestMethod.Parameters[i].Name := HeaderParamAttribute(LAttrib).Name;
-        ARestMethod.Parameters[i].Value := ConsumeMediaTypeAsString(LParameters[i].ParamType, Args[i], ARestMethod);
+          LRestParam.Name := HeaderParamAttribute(LAttrib).Name;
+        LRestParam.Value := ConsumeMediaTypeAsString(LParameters[i].ParamType, Args[i], ARestMethod);
       end;
     end;
 
     if LSkip then
     begin
-      ARestMethod.Parameters[i].IsDisabled := True;
+      LRestParam.IsDisabled := True;
     end
     else
     begin
-      if ARestMethod.Parameters[i].Value.IsEmpty then
-        ARestMethod.Parameters[i].Value := ConsumeMediaTypeAsString(LParameters[i].ParamType, Args[i], ARestMethod);
+      if LRestParam.Value.IsEmpty then
+        LRestParam.Value := ConsumeMediaTypeAsString(LParameters[i].ParamType, Args[i], ARestMethod);
     end;
   end;
 end;
@@ -539,6 +549,25 @@ end;
 function TRESTClient.HttpResultOK(AResponseCode: Integer): Boolean;
 begin
   Result := (AResponseCode >= 200) and (AResponseCode < 300)
+end;
+
+procedure TRESTClient.InjectRestMethodOutParameters(const Args: TArray<TValue>;
+  ARestMethod: TRESTMethod; AMethod: TRttiMethod; AResponse: IHttpResponse);
+var
+  i: Integer;
+  LRestParam: TRESTMethodParameter;
+begin
+  for i := Low(Args) to High(Args) do
+  begin
+    LRestParam := ARestMethod.Parameters[i];
+    if LRestParam.IsInjectable then
+    begin
+      if (Args[i].TypeInfo = TypeInfo(IHttpResponse)) then
+      begin
+        Args[i] := TValue.From<IHttpResponse>(AResponse);
+      end;
+    end;
+  end;
 end;
 
 function TRESTClient.InternalDoRequest(Method: TRttiMethod; const Args: TArray<TValue>;
