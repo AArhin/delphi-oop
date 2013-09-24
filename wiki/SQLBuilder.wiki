@@ -1,0 +1,49 @@
+#summary One-sentence summary of this page.
+#labels Phase-Implementation
+
+= Dynamic SQL Builder =
+
+Some usage examples:
+
+*Select statements:*
+{{{
+FSQLBuilder := TTransactSQLBuilder.Create();
+LSQL := FSQLBuilder
+    .Select.Column('C.FIRSTNAME').Column('C.LASTNAME')
+    .From('dbo.Customers C')
+    .Join('dbo.Details D on D.ID=C.ID')
+    .Where('C.CUSTNAME = ''Foobar''')
+    .Where('D.CUSTORDER = 1')
+    .ToString;
+}}}
+
+Output:
+
+{{{
+SELECT 
+ C.FIRSTNAME,C.LASTNAME
+ FROM dbo.Customers C
+ JOIN dbo.Details D on D.ID=C.ID
+     WHERE (C.CUSTNAME = 'Foobar') AND (D.CUSTORDER = 1)
+}}}
+
+
+*Building update statements:*
+{{{
+FSQLBuilder := TTransactSQLBuilder.Create();
+LSQL := FSQLBuilder.Update
+    .Table('dbo.Customers')
+    .Column('AGE').Values('18')
+    .Column('NAME').Values('Null')
+    .ToString;
+}}}
+
+Output:
+{{{
+UPDATE dbo.Customers
+ SET
+ AGE='18'
+ ,NAME=Null
+}}}
+
+_More usage examples can be found in delphi-oop core unit tests._
