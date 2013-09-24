@@ -43,6 +43,8 @@ Define our REST client:
   end;
 }}}
 
+_Note that our declared methods should be virtual, public and correctly annotated._
+
 Or if you use Delphi XE2 or higher define an interface:
 {{{
   IODataNorthwindClient = interface(IInvokable)
