@@ -60,18 +60,20 @@ procedure TGoogleOAuthTest.Authenticate_And_GetMe;
 var
   LPerson: TGooglePlusPerson;
 begin
-  FGoogleAuth.AccessToken := 'ya29.AHES6ZSEuqCTbIavTdo9OL4Az-VSgi3lxyf-x5iEbZbey5pTPw';
-  FGoogleAuth.RefreshToken := '1/5pElECbO_RwX8gZoUdCV3SB9i1fH366vb6uXwSbfvNE';
+  //FGoogleAuth.AccessToken := 'ya29.AHES6ZSEuqCTbIavTdo9OL4Az-VSgi3lxyf-x5iEbZbey5pTPw';
+  //FGoogleAuth.RefreshToken := '1/5pElECbO_RwX8gZoUdCV3SB9i1fH366vb6uXwSbfvNE';
+
   FGoogleAuth.ClientSecret := 'secret';
-  FGoogleAuth.ClientId := 'id';
-  FGoogleAuth.RedirectUri := 'uri';
+  FGoogleAuth.ClientId := 'client id';
+  FGoogleAuth.RedirectUri := 'urn:ietf:wg:oauth:2.0:oob';
+  FGoogleAuth.Scope := 'https://www.googleapis.com/auth/plus.login https://www.googleapis.com/auth/plus.me';
 
   CheckTrue( FGoogleAuth.DoAuthenticate );
 
   FClient.Authentication := FGoogleAuth;
   LPerson := FClient.GetMe();
   try
-    CheckEquals('Linas Naginionis', LPerson.displayName);
+    CheckEquals('Ipolitas Anisimovas', LPerson.displayName);
     CheckEquals('male', LPerson.gender);
   finally
     LPerson.Free;
