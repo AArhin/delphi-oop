@@ -76,7 +76,7 @@ type
   end;
 
   {$IF CompilerVersion = 22}
-  TODataNorthwindClient = class(TRESTClient)
+  TODataNorthwindClient = class(TSvRESTClient)
   public
     [GET] [Path('/Customers')] [Consumes(MEDIA_TYPE.JSON)]
     {$WARNINGS OFF}
