@@ -83,5 +83,18 @@ begin
 end;
 }}}
 
+=Path=
+Suppose we want to make a GET request with a variable in our path, e.g. http://localhost/unittest/{AId} where AId is our variable. We must define our method as follows:
+{{{
+[GET]
+[Path('/unittest/{AId}')]
+[Consumes(MEDIA_TYPE.JSON)]
+function GetPerson([QueryParam] const AId: string): TCouchPerson; virtual;
+}}}
+This way SvRESTClient will inject your given AId value into main URL. So if you call function like this: 
+{{{LPerson := FClient.GetPerson(10);}}}
+Request will be made using this URL: http://localhost/unittest/10
+
+
 
 _More usage examples of SvREST Client can be found in the unit tests of delphi-oop library._
