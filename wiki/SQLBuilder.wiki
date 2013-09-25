@@ -6,7 +6,7 @@
 Some usage examples:
 
 *Select statements:*
-{{{
+<code language="delphi">
 FSQLBuilder := TTransactSQLBuilder.Create();
 LSQL := FSQLBuilder
     .Select.Column('C.FIRSTNAME').Column('C.LASTNAME')
@@ -15,35 +15,35 @@ LSQL := FSQLBuilder
     .Where('C.CUSTNAME = ''Foobar''')
     .Where('D.CUSTORDER = 1')
     .ToString;
-}}}
+</code>
 
 Output:
 
-{{{
+<code language="sql">
 SELECT 
  C.FIRSTNAME,C.LASTNAME
  FROM dbo.Customers C
  JOIN dbo.Details D on D.ID=C.ID
      WHERE (C.CUSTNAME = 'Foobar') AND (D.CUSTORDER = 1)
-}}}
+</code>
 
 
 *Building update statements:*
-{{{
+<code language="delphi">
 FSQLBuilder := TTransactSQLBuilder.Create();
 LSQL := FSQLBuilder.Update
     .Table('dbo.Customers')
     .Column('AGE').Values('18')
     .Column('NAME').Values('Null')
     .ToString;
-}}}
+</code>
 
 Output:
-{{{
+<code language="sql">
 UPDATE dbo.Customers
  SET
  AGE='18'
  ,NAME=Null
-}}}
+</code>
 
 _More usage examples can be found in delphi-oop core unit tests._
