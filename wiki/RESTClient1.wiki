@@ -92,8 +92,8 @@ Suppose we want to make a GET request with a variable in our path, e.g. http://l
 function GetPerson([QueryParam] const AId: string): TCouchPerson; virtual;
 }}}
 This way SvRESTClient will inject your given AId value into main URL. So if you call function like this: 
-{{{LPerson := FClient.GetPerson(10);}}}
-Request will be made using this URL: http://localhost/unittest/10
+{{{LPerson := FClient.GetPerson('11D7');}}}
+Request will be made using this URL: http://localhost/unittest/11D7
 
 
 
