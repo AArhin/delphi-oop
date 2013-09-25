@@ -113,6 +113,7 @@ uses
   ,SysUtils
   ,StrUtils
   ,IdHTTP
+  ,WinSock
   ;
 
 { TCouchDBTest }
@@ -248,22 +249,30 @@ end;
 
 {$WARNINGS ON}
 
-function CouchDBInstalled(): Boolean;
+function PortTCP_IsOpen(dwPort : Word; ipAddressStr:AnsiString) : boolean;
 var
-  LHttp: TIdHTTP;
-  LResp: string;
+  client : sockaddr_in;
+  sock   : Integer;
+  ret    : Integer;
+  wsdata : WSAData;
 begin
-  LHttp := TIdHTTP.Create(nil);
+  Result:=False;
+  ret := WSAStartup($0002, wsdata); //initiates use of the Winsock DLL
+  if ret<>0 then exit;
   try
-    try
-      LResp := LHttp.Get('http://127.0.0.1:5984');
-      Result := LResp <> '';
-    except
-      Result := False;
-    end;
+    client.sin_family      := AF_INET;  //Set the protocol to use , in this case (IPv4)
+    client.sin_port        := htons(dwPort); //convert to TCP/IP network byte order (big-endian)
+    client.sin_addr.s_addr := inet_addr(PAnsiChar(ipAddressStr));  //convert to IN_ADDR  structure
+    sock  :=socket(AF_INET, SOCK_STREAM, 0);    //creates a socket
+    Result:=connect(sock,client,SizeOf(client))=0;  //establishes a connection to a specified socket
   finally
-    LHttp.Free;
+    WSACleanup;
   end;
+end;
+
+function CouchDBInstalled(): Boolean;
+begin
+  Result := PortTCP_IsOpen(5984, '127.0.0.1');
 end;
 
 initialization
