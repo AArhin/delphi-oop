@@ -60,4 +60,28 @@ That's it. Now we just need to create our client and call `GetCustomers()` metho
 
 https://lh6.googleusercontent.com/-J9ZRzCwLYos/UjoSKrjpxDI/AAAAAAAAC4k/WJLMNnOoEO8/w1005-h603-no/RestDemo.jpg
 
+
+===Injection===
+SvRESTClient can automatically inject IHttpResponse interface which belongs to the current context. To demonstrate this we need to change our method definition:
+{{{
+[GET] [Path('/Customers')] [Consumes(MEDIA_TYPE.JSON)]
+function GetCustomers([Context] out AResponse; IHttpResponse): TCustomers; virtual;
+}}}
+We added a new AResponse parameter to our method annotated with [Context] attribute which tells client to inject IHttpResponse intance into AResponse argument after the call is made. So now we can write our code like this:
+{{{
+var
+  LResponse: IHttpResponse;
+  LCustomers: TCustomers;
+  LHeadersText, LResponseText: string;
+begin
+  LCustomers := FClient.GetCustomers(LResponse);
+  if (LResponse.GetResponseCode = 200) then
+  begin
+    LHeadersText := LResponse.GetHeadersText;
+    LResponseText := LResponse.GetResponseText;
+  end;
+end;
+}}}
+
+
 _More usage examples of SvREST Client can be found in the unit tests of delphi-oop library._
