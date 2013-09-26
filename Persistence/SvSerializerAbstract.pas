@@ -276,85 +276,79 @@ var
   LAttrib: SvSerialize;
 begin
   inherited;
-  LObject := System.Default(T);
-  if not obj.IsEmpty and IsAssigned(RootObject) then
+  if (obj.IsEmpty) and not (IsAssigned(RootObject)) then
+    Exit;
+
+  if (AKey = '') then
+    LObject := RootObject
+  else
+    LObject := GetValueByName(GetObjectUniqueName(AKey, obj), RootObject);
+
+  if not IsAssigned(LObject) then
+    Exit;
+
+  LType := TSvRttiInfo.GetType(obj);
+
+  if Length(ACustomProps) > 0 then
   begin
-    if AKey = '' then
+    for I := Low(ACustomProps) to High(ACustomProps) do
     begin
-      LObject := RootObject;
+      LProp := LType.GetProperty(ACustomProps[I]);
+      if Assigned(LProp) and (LProp.IsWritable) then
+      begin
+        LPropName := LProp.Name;
+        LPair := GetValueByName(LPropName, LObject);
+        if IsAssigned(LPair) then
+        begin
+          LValue := SetValue(LPair, obj, LProp, LProp.PropertyType, LSkip);
+          if not LSkip and LProp.IsWritable  then
+            TSvRttiInfo.SetValue(LProp, obj, LValue);
+        end;
+      end;
+    end;
+  end
+  else
+  begin
+    if LType.IsRecord then
+    begin
+      for LField in LType.AsRecord.GetFields do
+      begin
+        LPropName := LField.Name;
+        LPair := GetValueByName(LPropName, LObject);
+        if IsAssigned(LPair) then
+        begin
+          LValue := SetValue(LPair, obj, TRttiProperty(LField), LField.FieldType, LSkip);
+          if not LSkip then
+            TSvRttiInfo.SetValue(LField, obj, LValue);
+        end;
+      end;
+    end
+    else if (IsTypeEnumerable(LType, LEnumMethod)) then
+    begin
+      TryDeserializeContainer(RootObject, obj, LType, LSkip, nil, obj, LSkip);
     end
     else
     begin
-      LObject := GetValueByName(GetObjectUniqueName(AKey, obj), RootObject);
-    end;
-
-    if IsAssigned(LObject) then
-    begin
-      LType := TSvRttiInfo.GetType(obj);
-
-      if Length(ACustomProps) > 0 then
+      for LProp in LType.GetProperties do
       begin
-        for I := Low(ACustomProps) to High(ACustomProps) do
+        if not LProp.IsWritable then
+          Continue;
+
+        if IsTransient(LProp) then
+          Continue;
+
+        LPropName := LProp.Name;
+        if TSvSerializer.TryGetAttribute(LProp, LAttrib) then
         begin
-          LProp := LType.GetProperty(ACustomProps[I]);
-          if Assigned(LProp) and (LProp.IsWritable) then
-          begin
-            LPropName := LProp.Name;
-            LPair := GetValueByName(LPropName, LObject);
-            if IsAssigned(LPair) then
-            begin
-              LValue := SetValue(LPair, obj, LProp, LProp.PropertyType, LSkip);
-              if not LSkip and LProp.IsWritable  then
-                TSvRttiInfo.SetValue(LProp, obj, LValue);
-            end;
-          end;
+          LPropName := LAttrib.Name;
         end;
-      end
-      else
-      begin
-        if LType.IsRecord then
-        begin
-          for LField in LType.AsRecord.GetFields do
-          begin
-            LPropName := LField.Name;
-            LPair := GetValueByName(LPropName, LObject);
-            if IsAssigned(LPair) then
-            begin
-              LValue := SetValue(LPair, obj, TRttiProperty(LField), LField.FieldType, LSkip);
-              if not LSkip then
-                TSvRttiInfo.SetValue(LField, obj, LValue);
-            end;
-          end;
-        end
-        else if (IsTypeEnumerable(LType, LEnumMethod)) then
-        begin
-          TryDeserializeContainer(RootObject, obj, LType, LSkip, nil, obj, LSkip);
-        end
-        else
-        begin
-          for LProp in LType.GetProperties do
-          begin
-            if not LProp.IsWritable then
-              Continue;
 
-            if IsTransient(LProp) then
-              Continue;
-
-            LPropName := LProp.Name;
-            if TSvSerializer.TryGetAttribute(LProp, LAttrib) then
-            begin
-              if (LAttrib.Name <> '') then
-                LPropName := LAttrib.Name;
-            end;
-
-            LPair := GetValueByName(LPropName, LObject);
-            if IsAssigned(LPair) then
-            begin
-              LValue := SetValue(LPair, obj, LProp, LProp.PropertyType, LSkip);
-              if not LSkip then
-                TSvRttiInfo.SetValue(LProp, obj, LValue);
-            end;
-          end;
+        LPair := GetValueByName(LPropName, LObject);
+        if IsAssigned(LPair) then
+        begin
+          LValue := SetValue(LPair, obj, LProp, LProp.PropertyType, LSkip);
+          if not LSkip then
+            TSvRttiInfo.SetValue(LProp, obj, LValue);
         end;
       end;
     end;
@@ -953,73 +947,72 @@ var
   LAttrib: SvSerialize;
   LEnumMethod: TRttiMethod;
 begin
-  if not obj.IsEmpty and (Assigned(AStream)) then
+  if (obj.IsEmpty) and not (Assigned(AStream)) then
+    Exit;
+
+  FStream := AStream;
+  LType := TSvRttiInfo.GetType(obj);
+
+  if not IsAssigned(RootObject) then
+    RootObject := CreateRootObject(LType);
+
+  //create main object
+  if (AKey = '') then
   begin
-    FStream := AStream;
-    LType := TSvRttiInfo.GetType(obj);
-
+    LObject := RootObject;
+  end
+  else
+  begin
     if not IsAssigned(RootObject) then
-      RootObject := CreateRootObject(LType);
+      RootObject := CreateObject();
+    LObject := CreateObject;
+    ObjectAdd(RootObject, GetObjectUniqueName(AKey, obj), LObject);
+  end;
 
-    //create main object
-    if AKey = '' then
+  if Length(ACustomProps) > 0 then
+  begin
+    for I := Low(ACustomProps) to High(ACustomProps) do
     begin
-      LObject := RootObject;
-    end
-    else
-    begin
-      if not IsAssigned(RootObject) then
-        RootObject := CreateObject();
-      LObject := CreateObject;
-      ObjectAdd(RootObject, GetObjectUniqueName(AKey, obj), LObject);
-    end;
-
-    if Length(ACustomProps) > 0 then
-    begin
-      for I := Low(ACustomProps) to High(ACustomProps) do
+      LProp := LType.GetProperty(ACustomProps[I]);
+      if Assigned(LProp) then
       begin
-        LProp := LType.GetProperty(ACustomProps[I]);
-        if Assigned(LProp) then
-        begin
-          LValue := TSvRttiInfo.GetValue(LProp, obj);
-          LPropName := LProp.Name;
-          ObjectAdd(LObject, LPropName, GetValue(LValue, LProp));
-        end;
+        LValue := TSvRttiInfo.GetValue(LProp, obj);
+        LPropName := LProp.Name;
+        ObjectAdd(LObject, LPropName, GetValue(LValue, LProp));
+      end;
+    end;
+  end
+  else
+  begin
+    if LType.IsRecord then
+    begin
+      for LField in LType.AsRecord.GetFields do
+      begin
+        LValue := LField.GetValue(obj.GetReferenceToRawData);
+        LPropName := LField.Name;
+        ObjectAdd(LObject, LPropName, GetValue(LValue, TRttiProperty(LField)));
       end;
     end
+    else if IsTypeEnumerable(LType, LEnumMethod) then
+    begin
+      RootObject := GetValue(obj, nil);
+    end
     else
     begin
-      if LType.IsRecord then
+      for LProp in LType.GetProperties do
       begin
-        for LField in LType.AsRecord.GetFields do
+        if IsTransient(LProp) then
+          Continue;
+
+        LValue := TSvRttiInfo.GetValue(LProp, obj);
+
+        LPropName := LProp.Name;
+        if TSvSerializer.TryGetAttribute(LProp, LAttrib) then
         begin
-          LValue := LField.GetValue(obj.GetReferenceToRawData);
-          LPropName := LField.Name;
-          ObjectAdd(LObject, LPropName, GetValue(LValue, TRttiProperty(LField)));
+          LPropName := LAttrib.Name;
         end;
-      end
-      else if IsTypeEnumerable(LType, LEnumMethod) then
-      begin
-        RootObject := GetValue(obj, nil);
-      end
-      else
-      begin
-        for LProp in LType.GetProperties do
-        begin
-          if IsTransient(LProp) then
-            Continue;
 
-          LValue := TSvRttiInfo.GetValue(LProp, obj);
-
-          LPropName := LProp.Name;
-          if TSvSerializer.TryGetAttribute(LProp, LAttrib) then
-          begin
-            if (LAttrib.Name <> '') then
-              LPropName := LAttrib.Name;
-          end;
-
-          ObjectAdd(LObject, LPropName, GetValue(LValue, LProp));
-        end;
+        ObjectAdd(LObject, LPropName, GetValue(LValue, LProp));
       end;
     end;
   end;
