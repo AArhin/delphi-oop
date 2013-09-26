@@ -833,7 +833,7 @@ class function TSvSerializer.TryGetAttribute(AProp: TRttiProperty;
   out AAtribute: SvSerialize): Boolean;
 begin
   AAtribute := GetAttribute(AProp);
-  Result := Assigned(AAtribute);
+  Result := Assigned(AAtribute) and (AAtribute.Name <> '');
 end;
 
 function TSvSerializer.UnMarshall<T>(const AFromString: string;

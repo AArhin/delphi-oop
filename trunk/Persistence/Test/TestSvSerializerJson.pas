@@ -401,6 +401,7 @@ type
     procedure TestNewPropertyAdded();
     procedure SerializeListOnly();
     procedure DateSupportTest();
+    procedure Serialize_Performance_Test();
   end;
 
   TestTSvSuperJsonSerializer = class(TestTSvJsonSerializerFactory)
@@ -536,6 +537,46 @@ begin
   finally
     LBean.Free;
   end;
+end;
+
+procedure TestTSvJsonSerializerFactory.Serialize_Performance_Test;
+var
+  LBean: TBean;
+  i, LCount: Integer;
+  LOutput: string;
+  LElapsed: Cardinal;
+begin
+  LCount := 1000;
+  for i := 1 to LCount do
+  begin
+    LBean := TBean.Create;
+    try
+      LBean.FirstName := 'Foo';
+      LBean.BeanSuper := TBeanSuper.Create;
+      LBean.BeanSuper.LastName := 'Bar';
+      LBean.BeanSuper.Bean := TBeanSuperSuper.Create;
+      LBean.BeanSuper.Bean.Password := 'password';
+      LBean.BeanSuper.Bean.Name := 'Super';
+      LBean.BeanSuper.Bean.Items := TList<Integer>.Create();
+      LBean.BeanSuper.Bean.Items.AddRange([1,2,3,4,5]);
+      TSvSerializer.SerializeObject(LBean, LOutput, Serializer.SerializeFormat);
+    finally
+      LBean.Free;
+    end;
+  end;
+  LElapsed := ElapsedTestTime;
+  Status(Format('Serialized %D objects in %D ms', [LCount, LElapsed]));
+
+  for i := 1 to LCount do
+  begin
+    LBean := TBean.Create;
+    try
+      TSvSerializer.DeSerializeObject(LBean, LOutput, Serializer.SerializeFormat);
+    finally
+      LBean.Free;
+    end;
+  end;
+  Status(Format('Deserialized %D objects in %D ms', [LCount, ElapsedTestTime - LElapsed]));
 end;
 
 procedure TestTSvJsonSerializerFactory.SerializeListOnly;
