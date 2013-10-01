@@ -44,6 +44,7 @@ type
     function GetRootObj: T;
     procedure SetRootObj(const Value: T);
   protected
+    function GetFieldName(AField: TRttiField): string;
     function GetPropertyName(AProp: TRttiProperty): string;
     function GetRttiProperty(AType: TRttiType; const APropertyName: string): TRttiProperty;
   protected
@@ -71,6 +72,7 @@ type
     procedure PostError(const ErrorText: string); override;
     function IsTypeEnumerable(ARttiType: TRttiType; out AEnumMethod: TRttiMethod): Boolean; override;
     function IsTransient(AProp: TRttiProperty): Boolean; override;
+    function IsFieldTransient(AField: TRttiField): Boolean;
     function GetRawPointer(const AValue: TValue): Pointer; override;
 
     function DoSetFromNumber(AJsonNumber: T): TValue; virtual;
@@ -474,13 +476,18 @@ var
   LType: TRttiType;
   LRecordType: TRttiRecordType;
   LField: TRttiField;
+  LFieldName: string;
 begin
   LType := TSvRttiInfo.GetType(AFrom.TypeInfo);
   LRecordType := LType.AsRecord;
   Result := CreateObject;
   for LField in LRecordType.GetFields do
   begin
-    ObjectAdd(Result, LField.Name, GetValue(LField.GetValue(AFrom.GetReferenceToRawData), nil));
+    if IsFieldTransient(LField) then
+      Continue;
+
+    LFieldName := GetFieldName(LField);
+    ObjectAdd(Result, LFieldName, GetValue(LField.GetValue(AFrom.GetReferenceToRawData), nil));
   end;
 end;
 
@@ -620,7 +627,7 @@ begin
         begin
           //search for property name
           LField := FindRecordFieldName(LEnumerator[i].Key, LRecordType);
-          if Assigned(LField) then
+          if Assigned(LField) and not IsFieldTransient(LField) then
           begin
             {DONE -oLinas -cGeneral : fix arguments}
             LField.SetValue(GetRawPointer(Result),
@@ -741,10 +748,12 @@ end;
 function TSvAbstractSerializer<T>.FindRecordFieldName(const AFieldName: string; ARecord: TRttiRecordType): TRttiField;
 var
   LField: TRttiField;
+  LCurrentFieldname: string;
 begin
   for LField in ARecord.GetFields do
   begin
-    if SameText(AFieldName, LField.Name) then
+    LCurrentFieldname := GetFieldName(LField);
+    if SameText(AFieldName, LCurrentFieldname) then
       Exit(LField);
   end;
   Result := nil;
@@ -772,6 +781,21 @@ begin
   Result := nil;
 end;
 
+function TSvAbstractSerializer<T>.GetFieldName(AField: TRttiField): string;
+var
+  LAttrib: TCustomAttribute;
+begin
+  Result := AField.Name;
+  for LAttrib in AField.GetAttributes do
+  begin
+    if LAttrib is SvSerialize then
+    begin
+      if (SvSerialize(LAttrib).Name <> '') then
+        Exit(SvSerialize(LAttrib).Name);
+    end;
+  end;
+end;
+
 function TSvAbstractSerializer<T>.GetObjectUniqueName(const AKey: string; obj: TValue): string;
 begin
   if not obj.IsEmpty then
@@ -794,7 +818,7 @@ begin
     if LAttrib is SvSerialize then
     begin
       if (SvSerialize(LAttrib).Name <> '') then
-        Exit(SvSerialize(LAttrib).Name)
+        Exit(SvSerialize(LAttrib).Name);
     end;
   end;
 end;
@@ -876,6 +900,23 @@ begin
       end;
     end;
   end;
+end;
+
+function TSvAbstractSerializer<T>.IsFieldTransient(AField: TRttiField): Boolean;
+var
+  LAttrib: TCustomAttribute;
+begin
+  if Assigned(AField) then
+  begin
+    for LAttrib in AField.GetAttributes do
+    begin
+      if LAttrib is SvTransientAttribute then
+      begin
+        Exit(True);
+      end;
+    end;
+  end;
+  Result := False;
 end;
 
 function TSvAbstractSerializer<T>.IsTransient(AProp: TRttiProperty): Boolean;

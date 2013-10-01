@@ -65,15 +65,25 @@ type
 
   TNumbers = set of TDemoEnum;
 
+  TDummyRecord = record
+    [SvSerialize('totalcount')]
+    RecordCount: Integer;
+    [SvTransient]
+    Caption: string;
+  end;
+
   TDummy = class
   private
     FDummy: string;
+    FDummyRec: TDummyRecord;
   public
     constructor Create(); overload;
     constructor Create(const ADummyName: string); overload;
 
     [SvSerialize('DummyValue')]
     property Dummy: string read FDummy write FDummy;
+
+    property DummyRec: TDummyRecord read FDummyRec write FDummyRec;
   end;
 
   TBeanSuperSuper = class
@@ -586,16 +596,24 @@ var
   LBean: TBeanSuperSuper;
   LDummy: TDummy;
   LOutput: string;
+  LRecord: TDummyRecord;
 begin
   LBean := TBeanSuperSuper.Create;
   try
     LBean.Dummies := TMyObjectList<TDummy>.Create;
     LDummy := TDummy.Create;
     LDummy.Dummy := 'abcdefgh';
+
+    LRecord.RecordCount := 100;
+    LRecord.Caption := 'No Value';
+    LDummy.DummyRec := LRecord;
+
     LBean.Dummies.Add(LDummy);
     TSvSerializer.SerializeObject(LBean, LOutput, Serializer.SerializeFormat);
 
     CheckTrue(Pos('DummyValue', LOutput) > 0);
+    CheckFalse(Pos('Caption', LOutput) > 0);
+    CheckTrue(Pos('totalcount', LOutput) > 0);
   finally
     LBean.Free;
   end;
@@ -604,6 +622,8 @@ begin
   try
     TSvSerializer.DeSerializeObject(LBean, LOutput, Serializer.SerializeFormat);
     CheckEquals('abcdefgh', LBean.Dummies[0].Dummy);
+    CheckEquals(100, LBean.Dummies.First.DummyRec.RecordCount);
+    CheckNotEquals('No Value', LBean.Dummies.First.DummyRec.Caption);
   finally
     LBean.Free;
   end;
