@@ -44,6 +44,9 @@ type
     function GetRootObj: T;
     procedure SetRootObj(const Value: T);
   protected
+    function GetPropertyName(AProp: TRttiProperty): string;
+    function GetRttiProperty(AType: TRttiType; const APropertyName: string): TRttiProperty;
+  protected
     procedure BeginSerialization(); override;
     procedure EndSerialization(); override;
     procedure BeginDeSerialization(AStream: TStream); override;
@@ -377,6 +380,7 @@ var
   LType: TRttiType;
   LEnumMethod: TRttiMethod;
   LCurrentProp: TRttiProperty;
+  LPropName: string;
 begin
   Result := System.Default(T);
   LType := TSvRttiInfo.GetType(AFrom.TypeInfo);
@@ -404,8 +408,9 @@ begin
           end;
           if LCurrentProp.Visibility in [mvPublic,mvPublished] then
           begin
+            LPropName := GetPropertyName(LCurrentProp);
             //try to serialize only published properties
-            ObjectAdd(Result, LCurrentProp.Name, GetValue(LCurrentProp.GetValue(AFrom.AsObject), LCurrentProp));
+            ObjectAdd(Result, LPropName, GetValue(LCurrentProp.GetValue(AFrom.AsObject), LCurrentProp));
           end;
         end;
       end;
@@ -750,6 +755,23 @@ begin
   Result := FRootObj;
 end;
 
+function TSvAbstractSerializer<T>.GetRttiProperty(AType: TRttiType;
+  const APropertyName: string): TRttiProperty;
+var
+  LPropName: string;
+begin
+  for Result in AType.GetProperties do
+  begin
+    LPropName := GetPropertyName(Result);
+
+    if SameText(APropertyName, LPropName) then
+    begin
+      Exit;
+    end;
+  end;
+  Result := nil;
+end;
+
 function TSvAbstractSerializer<T>.GetObjectUniqueName(const AKey: string; obj: TValue): string;
 begin
   if not obj.IsEmpty then
@@ -759,6 +781,21 @@ begin
   else
   begin
     raise ESvSerializeException.Create('Cannot get object unique name. Object cannot be nil');
+  end;
+end;
+
+function TSvAbstractSerializer<T>.GetPropertyName(AProp: TRttiProperty): string;
+var
+  LAttrib: TCustomAttribute;
+begin
+  Result := AProp.Name;
+  for LAttrib in AProp.GetAttributes do
+  begin
+    if LAttrib is SvSerialize then
+    begin
+      if (SvSerialize(LAttrib).Name <> '') then
+        Exit(SvSerialize(LAttrib).Name)
+    end;
   end;
 end;
 
@@ -1024,11 +1061,12 @@ var
   i: Integer;
   LCurrProp: TRttiProperty;
   LEnumerator: TArray<TEnumEntry<T>>;
+  LValue: TValue;
 begin
   LEnumerator := EnumerateObject(AObjectToEnumerate);
   for i := 0 to Length(LEnumerator) - 1 do
   begin
-    LCurrProp := AType.GetProperty(LEnumerator[i].Key);
+    LCurrProp := GetRttiProperty(AType, LEnumerator[i].Key);
     if Assigned(LCurrProp) then
     begin
       if IsTransient(LCurrProp) or (not LCurrProp.IsWritable) then
@@ -1036,8 +1074,9 @@ begin
         Continue;
       end;
 
-      LCurrProp.SetValue(GetRawPointer(AValue), SetValue(LEnumerator[i].Value, AValue, LCurrProp,
-        LCurrProp.PropertyType, ASkip));
+      LValue := SetValue(LEnumerator[i].Value, AValue, LCurrProp, LCurrProp.PropertyType, ASkip);
+      if not ASkip then
+        TSvRttiInfo.SetValue(LCurrProp, AValue, LValue);
     end;
   end;
 end;

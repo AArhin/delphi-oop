@@ -72,6 +72,7 @@ type
     constructor Create(); overload;
     constructor Create(const ADummyName: string); overload;
 
+    [SvSerialize('DummyValue')]
     property Dummy: string read FDummy write FDummy;
   end;
 
@@ -402,6 +403,7 @@ type
     procedure SerializeListOnly();
     procedure DateSupportTest();
     procedure Serialize_Performance_Test();
+    procedure Serialize_PropertyName_From_Attribute();
   end;
 
   TestTSvSuperJsonSerializer = class(TestTSvJsonSerializerFactory)
@@ -577,6 +579,34 @@ begin
     end;
   end;
   Status(Format('Deserialized %D objects in %D ms', [LCount, ElapsedTestTime - LElapsed]));
+end;
+
+procedure TestTSvJsonSerializerFactory.Serialize_PropertyName_From_Attribute;
+var
+  LBean: TBeanSuperSuper;
+  LDummy: TDummy;
+  LOutput: string;
+begin
+  LBean := TBeanSuperSuper.Create;
+  try
+    LBean.Dummies := TMyObjectList<TDummy>.Create;
+    LDummy := TDummy.Create;
+    LDummy.Dummy := 'abcdefgh';
+    LBean.Dummies.Add(LDummy);
+    TSvSerializer.SerializeObject(LBean, LOutput, Serializer.SerializeFormat);
+
+    CheckTrue(Pos('DummyValue', LOutput) > 0);
+  finally
+    LBean.Free;
+  end;
+
+  LBean := TBeanSuperSuper.Create;
+  try
+    TSvSerializer.DeSerializeObject(LBean, LOutput, Serializer.SerializeFormat);
+    CheckEquals('abcdefgh', LBean.Dummies[0].Dummy);
+  finally
+    LBean.Free;
+  end;
 end;
 
 procedure TestTSvJsonSerializerFactory.SerializeListOnly;
