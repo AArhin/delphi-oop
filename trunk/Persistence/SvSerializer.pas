@@ -51,11 +51,11 @@ type
   ///	  name.
   ///	</summary>
   {$ENDREGION}
-  SvSerialize = class(TCustomAttribute)
+  SvSerializeAttribute = class(TCustomAttribute)
   private
     FName: string;
   public
-    constructor Create(const AName: string = ''); overload;
+    constructor Create(const AName: string = ''); virtual;
     property Name: string read FName;
   end;
 
@@ -229,8 +229,8 @@ type
     property Count: Integer read GetCount;
     property Objects[const AName: string]: TObject read GetObject; default;
 
-    class function GetAttribute(AProp: TRttiProperty): SvSerialize;
-    class function TryGetAttribute(AProp: TRttiProperty; out AAtribute: SvSerialize): Boolean;
+    class function GetAttribute(AProp: TRttiProperty): SvSerializeAttribute;
+    class function TryGetAttribute(AProp: TRttiProperty; out AAtribute: SvSerializeAttribute): Boolean;
 
     {$REGION 'Documentation'}
     ///	<summary>
@@ -426,7 +426,7 @@ uses
 
 { SvSerialize }
 
-constructor SvSerialize.Create(const  AName: string);
+constructor SvSerializeAttribute.Create(const  AName: string);
 begin
   inherited Create();
   FName := AName;
@@ -633,15 +633,15 @@ begin
   end;
 end;
 
-class function TSvSerializer.GetAttribute(AProp: TRttiProperty): SvSerialize;
+class function TSvSerializer.GetAttribute(AProp: TRttiProperty): SvSerializeAttribute;
 var
   LAttr: TCustomAttribute;
 begin
   for LAttr in AProp.GetAttributes do
   begin
-    if LAttr is SvSerialize then
+    if LAttr is SvSerializeAttribute then
     begin
-      Exit(SvSerialize(LAttr));
+      Exit(SvSerializeAttribute(LAttr));
     end;
   end;
   Result := nil;
@@ -830,7 +830,7 @@ begin
 end;
 
 class function TSvSerializer.TryGetAttribute(AProp: TRttiProperty;
-  out AAtribute: SvSerialize): Boolean;
+  out AAtribute: SvSerializeAttribute): Boolean;
 begin
   AAtribute := GetAttribute(AProp);
   Result := Assigned(AAtribute) and (AAtribute.Name <> '');
