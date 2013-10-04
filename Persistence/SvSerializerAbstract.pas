@@ -278,7 +278,7 @@ var
   LSkip: Boolean;
   LField: TRttiField;
   LEnumMethod: TRttiMethod;
-  LAttrib: SvSerialize;
+  LAttrib: SvSerializeAttribute;
 begin
   inherited;
   if (obj.IsEmpty) and not (IsAssigned(RootObject)) then
@@ -301,7 +301,7 @@ begin
       LProp := LType.GetProperty(ACustomProps[I]);
       if Assigned(LProp) and (LProp.IsWritable) then
       begin
-        LPropName := LProp.Name;
+        LPropName := GetPropertyName(LProp);
         LPair := GetValueByName(LPropName, LObject);
         if IsAssigned(LPair) then
         begin
@@ -318,7 +318,7 @@ begin
     begin
       for LField in LType.AsRecord.GetFields do
       begin
-        LPropName := LField.Name;
+        LPropName := GetFieldName(LField);
         LPair := GetValueByName(LPropName, LObject);
         if IsAssigned(LPair) then
         begin
@@ -342,12 +342,7 @@ begin
         if IsTransient(LProp) then
           Continue;
 
-        LPropName := LProp.Name;
-        if TSvSerializer.TryGetAttribute(LProp, LAttrib) then
-        begin
-          LPropName := LAttrib.Name;
-        end;
-
+        LPropName := GetPropertyName(LProp);
         LPair := GetValueByName(LPropName, LObject);
         if IsAssigned(LPair) then
         begin
@@ -788,10 +783,10 @@ begin
   Result := AField.Name;
   for LAttrib in AField.GetAttributes do
   begin
-    if LAttrib is SvSerialize then
+    if LAttrib is SvSerializeAttribute then
     begin
-      if (SvSerialize(LAttrib).Name <> '') then
-        Exit(SvSerialize(LAttrib).Name);
+      if (SvSerializeAttribute(LAttrib).Name <> '') then
+        Exit(SvSerializeAttribute(LAttrib).Name);
     end;
   end;
 end;
@@ -815,10 +810,10 @@ begin
   Result := AProp.Name;
   for LAttrib in AProp.GetAttributes do
   begin
-    if LAttrib is SvSerialize then
+    if LAttrib is SvSerializeAttribute then
     begin
-      if (SvSerialize(LAttrib).Name <> '') then
-        Exit(SvSerialize(LAttrib).Name);
+      if (SvSerializeAttribute(LAttrib).Name <> '') then
+        Exit(SvSerializeAttribute(LAttrib).Name)
     end;
   end;
 end;
@@ -1022,7 +1017,7 @@ var
   LPropName: string;
   I: Integer;
   LField: TRttiField;
-  LAttrib: SvSerialize;
+  LAttrib: SvSerializeAttribute;
   LEnumMethod: TRttiMethod;
 begin
   if (obj.IsEmpty) and not (Assigned(AStream)) then
@@ -1055,7 +1050,7 @@ begin
       if Assigned(LProp) then
       begin
         LValue := TSvRttiInfo.GetValue(LProp, obj);
-        LPropName := LProp.Name;
+        LPropName := GetPropertyName(LProp);
         ObjectAdd(LObject, LPropName, GetValue(LValue, LProp));
       end;
     end;
@@ -1067,7 +1062,7 @@ begin
       for LField in LType.AsRecord.GetFields do
       begin
         LValue := LField.GetValue(obj.GetReferenceToRawData);
-        LPropName := LField.Name;
+        LPropName := GetFieldName(LField);
         ObjectAdd(LObject, LPropName, GetValue(LValue, TRttiProperty(LField)));
       end;
     end
@@ -1083,13 +1078,7 @@ begin
           Continue;
 
         LValue := TSvRttiInfo.GetValue(LProp, obj);
-
-        LPropName := LProp.Name;
-        if TSvSerializer.TryGetAttribute(LProp, LAttrib) then
-        begin
-          LPropName := LAttrib.Name;
-        end;
-
+        LPropName := GetPropertyName(LProp);
         ObjectAdd(LObject, LPropName, GetValue(LValue, LProp));
       end;
     end;
