@@ -69,7 +69,7 @@ type
 
   ESvSerializeException = class(Exception);
 
-  TSvSerializeFormat = (sstJson = 0, sstSuperJson, sstNativeXML);
+  TSvSerializeFormat = (sstJson = 0, sstSuperJson, sstNativeXML, sstCSV);
 
   ISerializer = interface(IInvokable)
     ['{6E0A63A4-0101-4239-A4A9-E74BC4A97C1C}']
@@ -156,6 +156,10 @@ type
     FObjs: TDictionary<string, TPair<TValue,TStringDynArray>>;
     FSerializeFormat: TSvSerializeFormat;
     FErrors: TList<string>;
+    FCsvDelimiter: Char;
+    FCsvQuoteChar: Char;
+    FCsvFirstLineColumns: Boolean;
+    FCsvWriterUseQuotes: Boolean;
 
     procedure SetSerializeFormat(const Value: TSvSerializeFormat);
     function GetObject(const AName: string): TObject;
@@ -387,6 +391,11 @@ type
 
     property ErrorCount: Integer read GetErrorCount;
     property SerializeFormat: TSvSerializeFormat read FSerializeFormat write SetSerializeFormat;
+
+    property CsvDelimiter: Char read FCsvDelimiter write FCsvDelimiter;
+    property CsvQuoteChar: Char read FCsvQuoteChar write FCsvQuoteChar;
+    property CsvFirstLineColumns: Boolean read FCsvFirstLineColumns write FCsvFirstLineColumns;
+    property CsvWriterUseQuotes: Boolean read FCsvWriterUseQuotes write FCsvWriterUseQuotes;
   end;
 
   {$IFDEF SV_HELPERS}
