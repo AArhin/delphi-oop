@@ -17,21 +17,21 @@ type
   private
     FValue: string;
   public
-    property Value: string read FValue write FValue;
+    procedure SetValue(const Value: string); virtual;
+  public
+    property Value: string read FValue write SetValue;
   end;
 
   TCsvNamedElement = class(TCsvBaseElement)
   private
     FName: string;
-    FElementValue: TCsvBaseElement;
+    function GetElementValue: TCsvBaseElement;
   public
     constructor Create(const AName: string); virtual;
     destructor Destroy; override;
 
-    procedure SetValue(const AValue: string);
-
     property Name: string read FName write FName;
-    property ElementValue: TCsvBaseElement read FElementValue;
+    property ElementValue: TCsvBaseElement read GetElementValue;
   end;
 
   TCsvObjectElement = class(TCsvBaseElement)
@@ -420,19 +420,16 @@ constructor TCsvNamedElement.Create(const AName: string);
 begin
   inherited Create();
   FName := AName;
-  FElementValue := TCsvBaseElement.Create;
 end;
 
 destructor TCsvNamedElement.Destroy;
 begin
-  FElementValue.Free;
   inherited Destroy;
 end;
 
-procedure TCsvNamedElement.SetValue(const AValue: string);
+function TCsvNamedElement.GetElementValue: TCsvBaseElement;
 begin
-  FElementValue.Value := AValue;
-  FValue := AValue;
+  Result := TCsvBaseElement(Self);
 end;
 
 { TCsvObjectElement }
@@ -495,6 +492,13 @@ function TCsvObjectElement.TryGetObjectByName(const AName: string;
   out AObject: TCsvNamedElement): Boolean;
 begin
   Result := FElements.TryGetValue(GetKey(AName), AObject);
+end;
+
+{ TCsvBaseElement }
+
+procedure TCsvBaseElement.SetValue(const Value: string);
+begin
+  FValue := Value;
 end;
 
 end.
