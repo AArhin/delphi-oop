@@ -160,6 +160,7 @@ type
     FCsvQuoteChar: Char;
     FCsvFirstLineColumns: Boolean;
     FCsvWriterUseQuotes: Boolean;
+    FFmtSettings: TFormatSettings;
 
     procedure SetSerializeFormat(const Value: TSvSerializeFormat);
     function GetObject(const AName: string): TObject;
@@ -392,6 +393,7 @@ type
     property ErrorCount: Integer read GetErrorCount;
     property SerializeFormat: TSvSerializeFormat read FSerializeFormat write SetSerializeFormat;
 
+    property FmtSettings: TFormatSettings read FFmtSettings write FFmtSettings;
     property CsvDelimiter: Char read FCsvDelimiter write FCsvDelimiter;
     property CsvQuoteChar: Char read FCsvQuoteChar write FCsvQuoteChar;
     property CsvFirstLineColumns: Boolean read FCsvFirstLineColumns write FCsvFirstLineColumns;
@@ -523,6 +525,11 @@ begin
   FSerializeFormat := AFormat;
   FObjs := TDictionary<string, TPair<TValue,TStringDynArray>>.Create();
   FErrors := TList<string>.Create();
+  FFmtSettings := TFormatSettings.Create();
+  FFmtSettings.DecimalSeparator := '.';
+  FFmtSettings.ShortDateFormat := 'yyyy-mm-dd';
+  FFmtSettings.LongDateFormat := 'yyyy-mm-dd hh:mm:ss';
+  FFmtSettings.DateSeparator := '-';
 end;
 
 function TSvSerializer.CreateConcreateSerializer(): ISerializer;

@@ -81,10 +81,6 @@ type
 
     function GetElementValue(const ALine: Integer; AColumn: Integer): string; virtual;
     function GetElementByName(const ALine: Integer; const AColumnName: string): TCsvBaseElement; virtual;
-    function GetElementValueByName(const ALine: Integer; const AColumnName: string): string; virtual;
-
-
-
 
     property FirstLineIsColumns: Boolean read FFirstLineIsColumns write FFirstLineIsColumns;
     property ColumnCount: Integer read FColumnCount write FColumnCount;
@@ -220,17 +216,6 @@ begin
   Result := LElement.Value;
 end;
 
-function TCsvRootElement.GetElementValueByName(const ALine: Integer;
-  const AColumnName: string): string;
-var
-  LColumnIndex: Integer;
-begin
-  if not TryGetColumnIndex(AColumnName, LColumnIndex) then
-    raise ESvCSVSerializerException.Create(Format('Column "%S" does not exist.', [AColumnName]));
-
-  Result := GetElementValue(ALine, LColumnIndex);
-end;
-
 function TCsvRootElement.GetInternalIndex(const ALine, AColumn: Integer): Integer;
 begin
   if (FColumnCount < 1) then
@@ -357,10 +342,13 @@ end;
 procedure TSvCsvSerializer.RebuildColumnIndexCache;
 var
   LColumn: Integer;
+  LElement: TCsvNamedElement;
 begin
+  FRoot.FColumnIndex.Clear;
   for LColumn := 0 to FRoot.ColumnCount - 1 do
   begin
-    FRoot.FColumnIndex.Add(FRoot.GetColumnIndexKey(FRoot.GetElementValue(0, LColumn)), LColumn);
+    LElement := FRoot.GetElement(0, LColumn) as TCsvNamedElement;
+    FRoot.FColumnIndex.Add(FRoot.GetColumnIndexKey(LElement.Name), LColumn);
   end;
 end;
 
