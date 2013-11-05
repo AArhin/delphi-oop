@@ -195,11 +195,7 @@ begin
   inherited Create(AOwner);
   FOwner := AOwner;
   FErrors := TList<string>.Create;
-  FFormatSettings := TFormatSettings.Create;
-  FFormatSettings.DecimalSeparator := '.';
-  FFormatSettings.ShortDateFormat := 'yyyy-mm-dd';
-  FFormatSettings.LongDateFormat := 'yyyy-mm-dd hh:mm:ss';
-  FFormatSettings.DateSeparator := '-';
+  FFormatSettings := AOwner.FmtSettings;
   FOldFormatSettings := FormatSettings;
 end;
 

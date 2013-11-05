@@ -31,6 +31,7 @@ type
     procedure SerializeListOfEntities();
     procedure SerializeListOfEntities_WithoutHeader();
     procedure DeserializeListOfEntities();
+    procedure DeserializeEntity();
   end;
 
 implementation
@@ -122,6 +123,28 @@ const
                                 'Second;Test;25' + #13#10
   ;
 
+
+procedure TTestSvSerializerCsvBackend.DeserializeEntity;
+var
+  LEntity: TCsvEntity;
+begin
+  LEntity := TCsvEntity.Create;
+  try
+    FSerializer.CsvDelimiter := ';';
+    FSerializer.CsvQuoteChar := '"';
+    FSerializer.CsvFirstLineColumns := True;
+    FSerializer.CsvWriterUseQuotes := True;
+
+    FSerializer.AddObject('', LEntity);
+    FSerializer.DeSerialize(CSV_ENTITY, TEncoding.UTF8);
+
+    CheckEquals('Foo', LEntity.Name);
+    CheckEquals('Bar', LEntity.Description);
+    CheckEquals(100, LEntity.Amount);
+  finally
+    LEntity.Free;
+  end;
+end;
 
 procedure TTestSvSerializerCsvBackend.DeserializeListOfEntities;
 var

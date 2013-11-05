@@ -120,8 +120,7 @@ end;
 function TSvSerializerCSV.CreateDouble(AValue: Double): TCsvBaseElement;
 begin
   Result := TCsvBaseElement.Create;
-  Result.Value := FloatToStr(AValue);
-  {TODO -oLinas -cGeneral : what format to use?}
+  Result.Value := FloatToStr(AValue, FFormatSettings);
 end;
 
 function TSvSerializerCSV.CreateInt64(AValue: Int64): TCsvBaseElement;
@@ -204,8 +203,7 @@ end;
 
 function TSvSerializerCSV.GetAsDouble(AValue: TCsvBaseElement): Double;
 begin
-  {TODO -oLinas -cGeneral : what format to use?}
-  Result := StrToFloatDef(AValue.Value, 0);
+  Result := StrToFloatDef(AValue.Value, 0, FFormatSettings);
 end;
 
 function TSvSerializerCSV.GetAsString(AValue: TCsvBaseElement): string;
@@ -272,6 +270,10 @@ begin
   if AObject is TCsvObjectElement then
   begin
     Result := TCsvObjectElement(AObject).GetObjectByName(AName);
+  end
+  else if AObject is TCsvRootElement then
+  begin
+    Result := TCsvRootElement(AObject).GetElementByName(0, AName);
   end;
 end;
 
@@ -286,8 +288,10 @@ begin
 end;
 
 function TSvSerializerCSV.IsBoolean(AValue: TCsvBaseElement): Boolean;
+var
+  LOut: Boolean;
 begin
-  Result := False;
+  Result := TryStrToBool(AValue.Value, LOut);
 end;
 
 function TSvSerializerCSV.IsNull(AValue: TCsvBaseElement): Boolean;
@@ -296,8 +300,10 @@ begin
 end;
 
 function TSvSerializerCSV.IsNumber(AValue: TCsvBaseElement): Boolean;
+var
+  LOut: Extended;
 begin
-  Result := False;
+  Result := TryStrToFloat(AValue.Value, LOut, FFormatSettings);
 end;
 
 function TSvSerializerCSV.IsObject(AValue: TCsvBaseElement): Boolean;
