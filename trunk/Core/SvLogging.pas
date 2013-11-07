@@ -83,10 +83,21 @@ type
     property Level: TSvLogLevel read GetLevel write SetLevel;
   end;
 
+  TSvMockLogger = class(TSvBaseLogger)
+  private
+    FLogLevel: TSvLogLevel;
+  protected
+    function GetLevel: TSvLogLevel; override;
+    procedure SetLevel(const Value: TSvLogLevel); override;
+  public
+    procedure Log(ALevel: TSvLogLevel; const AMessage: string; AException: Exception = nil); override;
+  end;
+
 
 function Logger(): ISvLogger;
 
 procedure CreateLogger(var ALogger: ISvLogger);
+procedure CreateMockLogger;
 
 implementation
 
@@ -106,6 +117,11 @@ end;
 procedure CreateLogger(var ALogger: ISvLogger);
 begin
   FLogger := ALogger;
+end;
+
+procedure CreateMockLogger;
+begin
+  FLogger := TSvMockLogger.Create;
 end;
 
 { TSvBaseLogger }
@@ -143,6 +159,23 @@ end;
 procedure TSvBaseLogger.Warn(const AMessage: string; AException: Exception);
 begin
   Log(TSvLogLevel.Warn, AMessage, AException);
+end;
+
+{ TSvMockLogger }
+
+function TSvMockLogger.GetLevel: TSvLogLevel;
+begin
+  Result := FLogLevel;
+end;
+
+procedure TSvMockLogger.Log(ALevel: TSvLogLevel; const AMessage: string; AException: Exception);
+begin
+  Writeln(Trim(AMessage));
+end;
+
+procedure TSvMockLogger.SetLevel(const Value: TSvLogLevel);
+begin
+  FLogLevel := Value;
 end;
 
 end.
