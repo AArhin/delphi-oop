@@ -729,9 +729,17 @@ end;
 procedure TSvAbstractSerializer<T>.EndSerialization;
 begin
   NullStrictConvert := FOldNullStrConvert;
-  FStringStream.WriteString(Self.ToString());
-  FStringStream.Position := 0;
-  FStream.CopyFrom(FStringStream, FStringStream.Size);
+
+  if FStream is TStringStream then
+  begin
+    TStringStream(FStream).WriteString(Self.ToString());
+  end
+  else
+  begin
+    FStringStream.WriteString(Self.ToString());
+    FStringStream.Position := 0;
+    FStream.CopyFrom(FStringStream, FStringStream.Size);
+  end;
   FStringStream.Free;
   FOwner.Errors.AddRange(FErrors);
 end;
